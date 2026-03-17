@@ -1069,6 +1069,12 @@ function doLogout() {
 function bootApp() {
   if (!state.causes || state.causes.length === 0) state.causes = JSON.parse(JSON.stringify(DEMO_CAUSES));
   if (!state.ajos || state.ajos.length === 0) state.ajos = JSON.parse(JSON.stringify(DEMO_AJOS));
+  // Backfill MaurPay ID for sessions that loaded before this feature existed
+  if (state.user && !state.user.maurpayId) {
+    state.user.maurpayId = generateMaurpayId();
+    localStorage.setItem('maurpay_user_' + state.user.email, JSON.stringify(state.user));
+    saveState();
+  }
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app-wrapper').classList.add('visible');
   applyPendingCredits();
