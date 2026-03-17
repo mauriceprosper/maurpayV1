@@ -1,0 +1,1549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MaurPay — Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Jost:wght@300;400;500;600&family=Syne+Mono&display=swap" rel="stylesheet">
+<script src="https://js.paystack.co/v1/inline.js"></script>
+<style>
+:root {
+  --black: #060608;
+  --surface: #0D0D14;
+  --surface2: #13131E;
+  --surface3: #1a1a28;
+  --gold: #E8B84B;
+  --gold-dim: rgba(232,184,75,0.15);
+  --gold-glow: rgba(232,184,75,0.08);
+  --teal: #00C9A7;
+  --teal-dim: rgba(0,201,167,0.12);
+  --red: #FF5757;
+  --red-dim: rgba(255,87,87,0.12);
+  --white: #F4F0E8;
+  --muted: #888898;
+  --border: rgba(232,184,75,0.12);
+  --border-light: rgba(255,255,255,0.06);
+  --sidebar-w: 240px;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--black);color:var(--white);font-family:'Jost',sans-serif;font-weight:400;overflow-x:hidden;min-height:100vh;}
+button{font-family:'Jost',sans-serif;cursor:pointer;}
+input,select,textarea{font-family:'Jost',sans-serif;}
+a{text-decoration:none;color:inherit;}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:var(--surface);}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+
+/* ══════════════════════════════════════
+   AUTH SCREEN
+══════════════════════════════════════ */
+#auth-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--black);
+  position: relative;
+  overflow: hidden;
+}
+#auth-screen::before {
+  content:'';
+  position:absolute;
+  top:-200px;left:-200px;
+  width:600px;height:600px;
+  background:radial-gradient(circle,rgba(232,184,75,0.06) 0%,transparent 70%);
+  pointer-events:none;
+}
+#auth-screen::after {
+  content:'';
+  position:absolute;
+  bottom:-200px;right:-200px;
+  width:500px;height:500px;
+  background:radial-gradient(circle,rgba(0,201,167,0.05) 0%,transparent 70%);
+  pointer-events:none;
+}
+.auth-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 52px 48px;
+  width: 100%;
+  max-width: 440px;
+  position: relative;
+  z-index: 2;
+  animation: fadeUp .5s ease forwards;
+}
+.auth-box::before {
+  content:'';
+  position:absolute;
+  top:-1px;left:15%;right:15%;
+  height:2px;
+  background:linear-gradient(90deg,transparent,var(--gold),transparent);
+}
+.auth-logo {
+  font-family:'Syne',sans-serif;
+  font-weight:800;
+  font-size:2rem;
+  letter-spacing:-0.03em;
+  margin-bottom:6px;
+  text-align:center;
+}
+.auth-logo span{color:var(--gold);}
+.auth-tagline{text-align:center;color:var(--muted);font-size:0.82rem;margin-bottom:36px;font-family:'Syne Mono',monospace;letter-spacing:0.08em;}
+.auth-tabs{display:flex;border:1px solid var(--border);margin-bottom:32px;}
+.auth-tab{flex:1;padding:12px;text-align:center;font-family:'Syne',sans-serif;font-weight:700;font-size:0.82rem;letter-spacing:0.06em;text-transform:uppercase;background:transparent;border:none;color:var(--muted);cursor:pointer;transition:all .3s;}
+.auth-tab.active{background:var(--gold);color:var(--black);}
+.form-group{margin-bottom:20px;}
+.form-label{display:block;font-size:0.78rem;letter-spacing:0.06em;color:var(--muted);text-transform:uppercase;font-family:'Syne Mono',monospace;margin-bottom:8px;}
+.form-input{width:100%;background:var(--surface2);border:1px solid var(--border-light);color:var(--white);padding:13px 16px;font-size:0.9rem;outline:none;transition:border .3s;}
+.form-input:focus{border-color:rgba(232,184,75,0.4);}
+.form-input::placeholder{color:var(--muted);}
+.btn-primary{width:100%;background:var(--gold);color:var(--black);border:none;padding:15px;font-family:'Syne',sans-serif;font-weight:800;font-size:0.85rem;letter-spacing:0.08em;text-transform:uppercase;transition:all .3s;clip-path:polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%);}
+.btn-primary:hover{background:#f5c84f;transform:translateY(-1px);box-shadow:0 8px 30px rgba(232,184,75,.3);}
+.auth-demo-note{text-align:center;margin-top:20px;font-size:0.75rem;color:rgba(136,136,152,.5);font-family:'Syne Mono',monospace;letter-spacing:0.06em;}
+
+/* ══════════════════════════════════════
+   APP LAYOUT
+══════════════════════════════════════ */
+#app-wrapper{display:none;min-height:100vh;}
+#app-wrapper.visible{display:flex;}
+
+/* SIDEBAR */
+#sidebar {
+  width: var(--sidebar-w);
+  background: var(--surface);
+  border-right: 1px solid var(--border-light);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  z-index: 100;
+  transition: transform .3s;
+}
+.sb-logo{padding:28px 24px 20px;border-bottom:1px solid var(--border-light);}
+.sb-logo-text{font-family:'Syne',sans-serif;font-weight:800;font-size:1.5rem;letter-spacing:-0.03em;}
+.sb-logo-text span{color:var(--gold);}
+.sb-logo-sub{font-size:0.62rem;font-family:'Syne Mono',monospace;color:var(--muted);letter-spacing:0.1em;margin-top:2px;}
+
+.sb-wallet{margin:16px;background:linear-gradient(135deg,#1a1a2e,#252540);border:1px solid var(--border);padding:16px;position:relative;overflow:hidden;}
+.sb-wallet::before{content:'';position:absolute;top:-1px;left:20%;right:20%;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);}
+.sb-wlabel{font-size:0.62rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;font-family:'Syne Mono',monospace;margin-bottom:4px;}
+.sb-wbal{font-family:'Syne',sans-serif;font-weight:800;font-size:1.4rem;letter-spacing:-0.03em;color:var(--white);}
+.sb-wbal .currency{font-size:.8rem;color:var(--gold);}
+.sb-fund-btn{display:block;width:100%;margin-top:12px;background:transparent;border:1px solid var(--border);color:var(--gold);font-family:'Syne',sans-serif;font-weight:700;font-size:0.7rem;letter-spacing:0.08em;text-transform:uppercase;padding:8px;text-align:center;transition:all .3s;cursor:pointer;}
+.sb-fund-btn:hover{background:var(--gold-dim);border-color:rgba(232,184,75,.4);}
+
+.sb-nav{flex:1;padding:8px 0;overflow-y:auto;}
+.sb-nav-label{padding:16px 24px 6px;font-size:0.6rem;letter-spacing:0.12em;color:rgba(136,136,152,.4);text-transform:uppercase;font-family:'Syne Mono',monospace;}
+.sb-link{display:flex;align-items:center;gap:12px;padding:11px 20px;margin:2px 8px;color:var(--muted);font-size:0.88rem;font-weight:500;cursor:pointer;border-radius:2px;transition:all .3s;border:1px solid transparent;}
+.sb-link .icon{font-size:1rem;width:22px;text-align:center;flex-shrink:0;}
+.sb-link:hover{color:var(--white);background:var(--surface2);}
+.sb-link.active{color:var(--gold);background:var(--gold-glow);border-color:var(--border);}
+.sb-link.active .icon{filter:none;}
+
+.sb-user{padding:16px;border-top:1px solid var(--border-light);display:flex;align-items:center;gap:12px;cursor:pointer;transition:background .3s;}
+.sb-user:hover{background:var(--surface2);}
+.sb-avatar{width:36px;height:36px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:.9rem;color:var(--black);flex-shrink:0;overflow:hidden;}
+.sb-avatar img{width:100%;height:100%;object-fit:cover;}
+.sb-uname{font-size:.82rem;font-weight:600;color:var(--white);}
+.sb-uemail{font-size:.7rem;color:var(--muted);}
+.sb-logout{margin-left:auto;font-size:.7rem;color:var(--muted);background:none;border:none;cursor:pointer;font-family:'Jost';padding:4px 6px;transition:color .3s;}
+.sb-logout:hover{color:var(--red);}
+
+/* TOPBAR (mobile) */
+#topbar {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  background: rgba(6,6,8,.92);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border-light);
+  z-index: 100;
+  padding: 14px 20px;
+  align-items: center;
+  justify-content: space-between;
+}
+.tb-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.3rem;letter-spacing:-0.03em;}
+.tb-logo span{color:var(--gold);}
+.tb-right{display:flex;align-items:center;gap:12px;}
+.tb-bal{font-family:'Syne Mono',monospace;font-size:.75rem;color:var(--gold);}
+.tb-avatar{width:32px;height:32px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:.8rem;color:var(--black);overflow:hidden;cursor:pointer;}
+.tb-avatar img{width:100%;height:100%;object-fit:cover;}
+
+/* BOTTOM NAV (mobile) */
+#bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border-light);
+  z-index: 100;
+  padding: 0;
+}
+.bn-inner{display:flex;align-items:stretch;}
+.bn-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 4px 8px;gap:3px;cursor:pointer;transition:background .2s;border:none;background:none;color:var(--muted);font-size:.6rem;font-family:'Syne Mono',monospace;letter-spacing:.04em;}
+.bn-item .bi{font-size:1.1rem;}
+.bn-item.active{color:var(--gold);}
+
+/* MAIN CONTENT */
+#main-content {
+  margin-left: var(--sidebar-w);
+  flex: 1;
+  padding: 40px;
+  min-height: 100vh;
+}
+.page{display:none;}
+.page.active{display:block;}
+
+/* ══════════════════════════════════════
+   COMPONENTS
+══════════════════════════════════════ */
+.page-header{margin-bottom:36px;}
+.page-title{font-family:'Syne',sans-serif;font-weight:800;font-size:1.8rem;letter-spacing:-0.03em;margin-bottom:4px;}
+.page-sub{color:var(--muted);font-size:.88rem;font-weight:300;}
+
+.card{background:var(--surface);border:1px solid var(--border-light);padding:28px;position:relative;}
+.card-title{font-family:'Syne',sans-serif;font-weight:700;font-size:.82rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+
+.tag{display:inline-block;font-family:'Syne Mono',monospace;font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border:1px solid;border-radius:1px;}
+.tag-gold{color:var(--gold);border-color:var(--border);}
+.tag-teal{color:var(--teal);border-color:rgba(0,201,167,.25);}
+.tag-red{color:var(--red);border-color:rgba(255,87,87,.25);}
+.tag-muted{color:var(--muted);border-color:rgba(136,136,152,.2);}
+
+.btn-sm{background:var(--gold);color:var(--black);border:none;padding:8px 18px;font-family:'Syne',sans-serif;font-weight:700;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:all .3s;}
+.btn-sm:hover{background:#f5c84f;}
+.btn-outline-sm{background:transparent;color:var(--muted);border:1px solid var(--border-light);padding:7px 16px;font-family:'Syne',sans-serif;font-weight:600;font-size:.72rem;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;transition:all .3s;}
+.btn-outline-sm:hover{border-color:rgba(232,184,75,.4);color:var(--gold);}
+.btn-danger-sm{background:transparent;color:var(--red);border:1px solid rgba(255,87,87,.25);padding:7px 16px;font-family:'Syne',sans-serif;font-weight:600;font-size:.72rem;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;transition:all .3s;}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);z-index:500;display:none;align-items:center;justify-content:center;padding:20px;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:var(--surface);border:1px solid var(--border);width:100%;max-width:480px;padding:40px;position:relative;animation:fadeUp .3s ease;}
+.modal-box::before{content:'';position:absolute;top:-1px;left:20%;right:20%;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);}
+.modal-title{font-family:'Syne',sans-serif;font-weight:800;font-size:1.3rem;letter-spacing:-0.02em;margin-bottom:6px;}
+.modal-sub{color:var(--muted);font-size:.82rem;margin-bottom:28px;}
+.modal-close{position:absolute;top:16px;right:16px;background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;padding:4px 8px;transition:color .3s;}
+.modal-close:hover{color:var(--white);}
+
+/* TOAST */
+#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border);padding:12px 24px;font-size:.82rem;font-family:'Syne Mono',monospace;letter-spacing:.04em;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;}
+#toast.show{opacity:1;}
+#toast.success{border-color:rgba(0,201,167,.4);color:var(--teal);}
+#toast.error{border-color:rgba(255,87,87,.4);color:var(--red);}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+
+/* ══════════════════════════════════════
+   DASHBOARD
+══════════════════════════════════════ */
+.dash-welcome{font-family:'Syne',sans-serif;font-weight:800;font-size:2rem;letter-spacing:-0.03em;margin-bottom:4px;}
+.dash-welcome span{color:var(--gold);}
+.dash-date{color:var(--muted);font-size:.8rem;font-family:'Syne Mono',monospace;letter-spacing:.06em;margin-bottom:32px;}
+
+.wallet-hero{background:linear-gradient(135deg,#141428,#1e1e3c);border:1px solid var(--border);padding:36px;position:relative;overflow:hidden;margin-bottom:24px;}
+.wallet-hero::before{content:'';position:absolute;top:-1px;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent 10%,var(--gold) 50%,transparent 90%);}
+.wallet-hero::after{content:'🏅';position:absolute;right:32px;top:50%;transform:translateY(-50%);font-size:5rem;opacity:.06;}
+.wh-label{font-size:.7rem;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;font-family:'Syne Mono',monospace;margin-bottom:8px;}
+.wh-amount{font-family:'Syne',sans-serif;font-weight:800;font-size:3rem;letter-spacing:-0.04em;line-height:1;margin-bottom:4px;}
+.wh-amount .cur{font-size:1.4rem;color:var(--gold);margin-right:4px;}
+.wh-tagline{color:var(--muted);font-size:.8rem;font-weight:300;margin-bottom:24px;}
+.wh-actions{display:flex;gap:12px;flex-wrap:wrap;}
+
+.quick-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}
+.qa-item{background:var(--surface);border:1px solid var(--border-light);padding:20px 16px;text-align:center;cursor:pointer;transition:all .3s;display:flex;flex-direction:column;align-items:center;gap:10px;}
+.qa-item:hover{border-color:var(--border);background:var(--surface2);}
+.qa-icon{font-size:1.6rem;line-height:1;}
+.qa-label{font-family:'Syne',sans-serif;font-weight:600;font-size:.72rem;letter-spacing:.04em;color:var(--muted);}
+
+.tx-list{display:flex;flex-direction:column;gap:0;}
+.tx-row{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--border-light);}
+.tx-row:last-child{border-bottom:none;}
+.tx-dot{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;}
+.tx-dot.credit{background:var(--teal-dim);border:1px solid rgba(0,201,167,.2);}
+.tx-dot.debit{background:var(--red-dim);border:1px solid rgba(255,87,87,.2);}
+.tx-info{flex:1;}
+.tx-name{font-size:.88rem;font-weight:500;color:var(--white);margin-bottom:2px;}
+.tx-time{font-size:.72rem;color:var(--muted);}
+.tx-amt{font-family:'Syne',sans-serif;font-weight:700;font-size:.92rem;}
+.tx-amt.credit{color:var(--teal);}
+.tx-amt.debit{color:var(--red);}
+.tx-empty{text-align:center;padding:32px;color:var(--muted);font-size:.85rem;}
+
+/* ══════════════════════════════════════
+   VTU SERVICES
+══════════════════════════════════════ */
+.service-tabs{display:flex;gap:0;border:1px solid var(--border-light);margin-bottom:28px;overflow:hidden;}
+.svc-tab{flex:1;padding:12px;text-align:center;font-family:'Syne',sans-serif;font-weight:700;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;background:none;border:none;color:var(--muted);cursor:pointer;transition:all .3s;border-right:1px solid var(--border-light);}
+.svc-tab:last-child{border-right:none;}
+.svc-tab.active{background:var(--gold);color:var(--black);}
+.svc-panel{display:none;}
+.svc-panel.active{display:block;}
+
+.network-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}
+.net-btn{background:var(--surface2);border:1px solid var(--border-light);padding:16px 8px;text-align:center;cursor:pointer;transition:all .3s;display:flex;flex-direction:column;align-items:center;gap:6px;}
+.net-btn:hover,.net-btn.active{border-color:rgba(232,184,75,.4);background:var(--gold-glow);}
+.net-btn.active .net-name{color:var(--gold);}
+.net-icon{font-size:1.4rem;}
+.net-name{font-size:.72rem;font-family:'Syne',sans-serif;font-weight:700;color:var(--muted);}
+
+.bundle-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px;}
+.bundle-item{background:var(--surface2);border:1px solid var(--border-light);padding:16px 12px;cursor:pointer;transition:all .3s;}
+.bundle-item:hover,.bundle-item.selected{border-color:rgba(232,184,75,.4);background:var(--gold-glow);}
+.bundle-size{font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;color:var(--white);}
+.bundle-validity{font-size:.7rem;color:var(--muted);margin:3px 0;}
+.bundle-price{font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem;color:var(--gold);}
+
+.amount-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+.chip{background:var(--surface2);border:1px solid var(--border-light);padding:8px 16px;font-family:'Syne',sans-serif;font-weight:700;font-size:.8rem;cursor:pointer;transition:all .3s;color:var(--muted);}
+.chip:hover,.chip.active{border-color:rgba(232,184,75,.4);background:var(--gold-glow);color:var(--gold);}
+
+/* ══════════════════════════════════════
+   CROWDFUNDING
+══════════════════════════════════════ */
+.causes-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+.cat-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px;}
+.cat-btn{background:var(--surface2);border:1px solid var(--border-light);padding:7px 16px;font-family:'Syne Mono',monospace;font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;color:var(--muted);transition:all .3s;}
+.cat-btn:hover,.cat-btn.active{border-color:rgba(232,184,75,.4);color:var(--gold);background:var(--gold-glow);}
+
+.causes-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+.cause-card{background:var(--surface);border:1px solid var(--border-light);overflow:hidden;transition:border .3s;cursor:pointer;}
+.cause-card:hover{border-color:var(--border);}
+.cause-img{height:140px;background:var(--surface2);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:3rem;}
+.cause-body{padding:20px;}
+.cause-cat{font-family:'Syne Mono',monospace;font-size:.6rem;letter-spacing:.1em;color:var(--teal);text-transform:uppercase;margin-bottom:8px;}
+.cause-title{font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem;letter-spacing:-0.01em;margin-bottom:8px;line-height:1.3;}
+.cause-desc{font-size:.78rem;color:var(--muted);font-weight:300;line-height:1.6;margin-bottom:14px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.progress-wrap{margin-bottom:10px;}
+.progress-bar-bg{background:var(--surface2);height:3px;border-radius:2px;overflow:hidden;}
+.progress-bar-fill{height:100%;background:linear-gradient(90deg,var(--gold),#f5c84f);border-radius:2px;transition:width .6s;}
+.progress-stats{display:flex;justify-content:space-between;margin-top:6px;font-size:.7rem;}
+.progress-raised{color:var(--gold);font-family:'Syne',sans-serif;font-weight:700;}
+.progress-target{color:var(--muted);}
+.cause-footer{display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--border-light);}
+.cause-status{font-size:.62rem;font-family:'Syne Mono',monospace;letter-spacing:.06em;text-transform:uppercase;}
+.cause-status.active{color:var(--teal);}
+.cause-status.ended{color:var(--muted);}
+
+/* CAUSE DETAIL MODAL */
+.cause-detail-img{height:180px;background:var(--surface2);border:1px solid var(--border-light);display:flex;align-items:center;justify-content:center;font-size:4rem;margin-bottom:20px;}
+.donate-split{display:flex;gap:0;border:1px solid var(--border-light);margin-bottom:20px;}
+.donate-tab{flex:1;padding:10px;text-align:center;font-family:'Syne',sans-serif;font-weight:700;font-size:.72rem;letter-spacing:.04em;text-transform:uppercase;background:none;border:none;color:var(--muted);cursor:pointer;transition:all .3s;border-right:1px solid var(--border-light);}
+.donate-tab:last-child{border-right:none;}
+.donate-tab.active{background:var(--gold);color:var(--black);}
+
+/* ══════════════════════════════════════
+   AJO CIRCLES
+══════════════════════════════════════ */
+.ajo-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;}
+.ajo-card{background:var(--surface);border:1px solid var(--border-light);padding:24px;position:relative;overflow:hidden;transition:border .3s;}
+.ajo-card:hover{border-color:var(--border);}
+.ajo-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--teal),transparent);}
+.ajo-banner{height:80px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:2.2rem;margin:-24px -24px 16px;border-bottom:1px solid var(--border-light);}
+.ajo-name{font-family:'Syne',sans-serif;font-weight:800;font-size:1rem;letter-spacing:-0.01em;margin-bottom:4px;}
+.ajo-desc{font-size:.78rem;color:var(--muted);font-weight:300;margin-bottom:14px;line-height:1.5;}
+.ajo-meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.ajo-members{display:flex;align-items:center;gap:-4px;margin-bottom:12px;}
+.ajo-m-dot{width:26px;height:26px;border-radius:50%;background:var(--surface2);border:2px solid var(--surface);display:flex;align-items:center;justify-content:center;font-size:.65rem;margin-left:-8px;font-family:'Syne',sans-serif;font-weight:700;}
+.ajo-m-dot:first-child{margin-left:0;}
+.ajo-m-more{background:var(--surface3);color:var(--muted);font-size:.6rem;}
+
+/* ══════════════════════════════════════
+   PROFILE
+══════════════════════════════════════ */
+.profile-hero{display:flex;align-items:center;gap:24px;margin-bottom:32px;padding:28px;background:var(--surface);border:1px solid var(--border-light);}
+.profile-avatar-big{width:80px;height:80px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:2rem;color:var(--black);flex-shrink:0;overflow:hidden;border:3px solid var(--border);}
+.profile-avatar-big img{width:100%;height:100%;object-fit:cover;}
+.profile-name{font-family:'Syne',sans-serif;font-weight:800;font-size:1.4rem;letter-spacing:-0.02em;margin-bottom:4px;}
+.profile-email{font-size:.82rem;color:var(--muted);font-family:'Syne Mono',monospace;letter-spacing:.04em;}
+
+.profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;}
+.profile-field{background:var(--surface);border:1px solid var(--border-light);padding:18px 20px;}
+.pf-label{font-size:.62rem;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;font-family:'Syne Mono',monospace;margin-bottom:6px;}
+.pf-value{font-size:.92rem;font-weight:500;color:var(--white);}
+
+.avatar-picker{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;}
+.av-opt{width:52px;height:52px;border-radius:50%;background:var(--surface2);border:2px solid var(--border-light);display:flex;align-items:center;justify-content:center;font-size:1.4rem;cursor:pointer;transition:all .3s;}
+.av-opt:hover,.av-opt.selected{border-color:var(--gold);background:var(--gold-glow);}
+
+/* ══════════════════════════════════════
+   DEMO BANNER
+══════════════════════════════════════ */
+.demo-banner{background:linear-gradient(90deg,rgba(232,184,75,.08),rgba(0,201,167,.06));border:1px solid var(--border);padding:14px 20px;margin-bottom:28px;display:flex;align-items:flex-start;gap:12px;font-size:.8rem;}
+.demo-banner .icon{font-size:1.1rem;flex-shrink:0;margin-top:1px;}
+.demo-banner strong{color:var(--gold);}
+.demo-banner p{color:var(--muted);line-height:1.6;}
+
+/* ══════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════ */
+@media(max-width:1024px){
+  .causes-grid{grid-template-columns:repeat(2,1fr);}
+  .grid-3{grid-template-columns:1fr 1fr;}
+}
+@media(max-width:768px){
+  #sidebar{transform:translateX(-100%);}
+  #sidebar.open{transform:translateX(0);}
+  #topbar{display:flex;}
+  #bottom-nav{display:block;}
+  #main-content{margin-left:0;padding:20px 16px 100px;padding-top:72px;}
+  .quick-actions{grid-template-columns:repeat(4,1fr);}
+  .causes-grid{grid-template-columns:1fr;}
+  .ajo-grid{grid-template-columns:1fr;}
+  .grid-2{grid-template-columns:1fr;}
+  .profile-grid{grid-template-columns:1fr;}
+  .wh-amount{font-size:2.2rem;}
+  .bundle-grid{grid-template-columns:1fr 1fr;}
+  .network-grid{grid-template-columns:repeat(4,1fr);}
+  .modal-box{padding:28px 20px;}
+  .svc-tab{font-size:.62rem;padding:10px 6px;}
+}
+@media(max-width:480px){
+  .quick-actions{grid-template-columns:repeat(2,1fr);}
+  .wh-amount{font-size:1.9rem;}
+  .avatar-picker{grid-template-columns:repeat(5,1fr);}
+}
+</style>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<!-- ══════════════════════════════════════
+     AUTH SCREEN
+══════════════════════════════════════ -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <div class="auth-logo">Maur<span>Pay</span></div>
+    <div class="auth-tagline">Nigeria's All-in-One Finance Platform</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('login')">Sign In</button>
+      <button class="auth-tab" onclick="switchAuthTab('register')">Create Account</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="login-form">
+      <div class="form-group">
+        <label class="form-label">Email Address</label>
+        <input class="form-input" type="email" id="login-email" placeholder="you@email.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input class="form-input" type="password" id="login-password" placeholder="Any password works">
+      </div>
+      <button class="btn-primary" onclick="doLogin()">Sign In</button>
+      <p class="auth-demo-note">Demo mode — any email & password accepted</p>
+    </div>
+
+    <!-- REGISTER -->
+    <div id="register-form" style="display:none">
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <input class="form-input" type="text" id="reg-name" placeholder="Your full name">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email Address</label>
+        <input class="form-input" type="email" id="reg-email" placeholder="you@email.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Phone Number</label>
+        <input class="form-input" type="tel" id="reg-phone" placeholder="08012345678">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input class="form-input" type="password" id="reg-password" placeholder="Create a password">
+      </div>
+      <button class="btn-primary" onclick="doRegister()">Create Account</button>
+      <p class="auth-demo-note">Demo mode — details saved locally</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     APP WRAPPER
+══════════════════════════════════════ -->
+<div id="app-wrapper">
+
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div class="sb-logo">
+      <div class="sb-logo-text">Maur<span>Pay</span></div>
+      <div class="sb-logo-sub">Demo Version</div>
+    </div>
+
+    <div class="sb-wallet">
+      <div class="sb-wlabel">Wallet Balance</div>
+      <div class="sb-wbal"><span class="currency">₦</span><span id="sb-balance">0.00</span></div>
+      <button class="sb-fund-btn" onclick="openModal('fund-modal')">+ Fund Wallet</button>
+    </div>
+
+    <nav class="sb-nav">
+      <div class="sb-nav-label">Overview</div>
+      <div class="sb-link active" onclick="goTo('dashboard')"><span class="icon">🏠</span>Dashboard</div>
+      <div class="sb-nav-label">Services</div>
+      <div class="sb-link" onclick="goTo('vtu')"><span class="icon">📡</span>Bills & VTU</div>
+      <div class="sb-nav-label">Community</div>
+      <div class="sb-link" onclick="goTo('causes')"><span class="icon">🎯</span>Crowdfunding</div>
+      <div class="sb-link" onclick="goTo('ajo')"><span class="icon">👥</span>Ajo Circles</div>
+      <div class="sb-nav-label">Account</div>
+      <div class="sb-link" onclick="goTo('profile')"><span class="icon">👤</span>My Profile</div>
+    </nav>
+
+    <div class="sb-user" onclick="goTo('profile')">
+      <div class="sb-avatar" id="sb-avatar">M</div>
+      <div>
+        <div class="sb-uname" id="sb-uname">Loading...</div>
+        <div class="sb-uemail" id="sb-uemail">—</div>
+      </div>
+      <button class="sb-logout" onclick="event.stopPropagation();doLogout()">Out</button>
+    </div>
+  </div>
+
+  <!-- MOBILE TOPBAR -->
+  <div id="topbar">
+    <div class="tb-logo">Maur<span>Pay</span></div>
+    <div class="tb-right">
+      <div class="tb-bal" id="tb-balance">₦0</div>
+      <div class="tb-avatar" id="tb-avatar" onclick="goTo('profile')">M</div>
+    </div>
+  </div>
+
+  <!-- MOBILE BOTTOM NAV -->
+  <div id="bottom-nav">
+    <div class="bn-inner">
+      <button class="bn-item active" onclick="goTo('dashboard')"><span class="bi">🏠</span>Home</button>
+      <button class="bn-item" onclick="goTo('vtu')"><span class="bi">📡</span>Bills</button>
+      <button class="bn-item" onclick="goTo('causes')"><span class="bi">🎯</span>Causes</button>
+      <button class="bn-item" onclick="goTo('ajo')"><span class="bi">👥</span>Ajo</button>
+      <button class="bn-item" onclick="goTo('profile')"><span class="bi">👤</span>Profile</button>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <main id="main-content">
+
+    <!-- ── DASHBOARD ── -->
+    <div id="page-dashboard" class="page active">
+      <div class="demo-banner">
+        <span class="icon">🧪</span>
+        <div><strong>Demo Mode Active</strong><br>
+        <p>This is a fully interactive demo. Fund your wallet with Paystack test cards, buy airtime, donate to causes, and explore every feature. No real money is used.</p></div>
+      </div>
+
+      <div class="dash-welcome">Welcome back, <span id="dash-name">there</span> 👋</div>
+      <div class="dash-date" id="dash-date">—</div>
+
+      <div class="wallet-hero">
+        <div class="wh-label">Total Wallet Balance</div>
+        <div class="wh-amount"><span class="cur">₦</span><span id="dash-balance">0.00</span></div>
+        <div class="wh-tagline">One balance for bills, donations & Ajo contributions</div>
+        <div class="wh-actions">
+          <button class="btn-sm" onclick="openModal('fund-modal')">+ Fund Wallet</button>
+          <button class="btn-outline-sm" onclick="goTo('vtu')">Pay Bills</button>
+          <button class="btn-outline-sm" onclick="goTo('causes')">Donate</button>
+        </div>
+      </div>
+
+      <div class="quick-actions">
+        <div class="qa-item" onclick="openVtuTab('airtime')"><div class="qa-icon">📱</div><div class="qa-label">Airtime</div></div>
+        <div class="qa-item" onclick="openVtuTab('data')"><div class="qa-icon">📶</div><div class="qa-label">Data</div></div>
+        <div class="qa-item" onclick="openVtuTab('electricity')"><div class="qa-icon">⚡</div><div class="qa-label">Electricity</div></div>
+        <div class="qa-item" onclick="openVtuTab('cable')"><div class="qa-icon">📺</div><div class="qa-label">Cable TV</div></div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Recent Transactions</div>
+          <div id="tx-list"><div class="tx-empty">No transactions yet.<br>Fund your wallet to get started.</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Active Causes</div>
+          <div id="dash-causes-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── VTU SERVICES ── -->
+    <div id="page-vtu" class="page">
+      <div class="page-header">
+        <div class="page-title">Bills & VTU</div>
+        <div class="page-sub">Airtime, data, electricity and cable — all from your wallet</div>
+      </div>
+      <div class="service-tabs">
+        <button class="svc-tab active" onclick="switchVtu('airtime')">📱 Airtime</button>
+        <button class="svc-tab" onclick="switchVtu('data')">📶 Data</button>
+        <button class="svc-tab" onclick="switchVtu('electricity')">⚡ Electricity</button>
+        <button class="svc-tab" onclick="switchVtu('cable')">📺 Cable TV</button>
+      </div>
+
+      <!-- AIRTIME -->
+      <div id="vtu-airtime" class="svc-panel active">
+        <div class="card">
+          <div class="card-title">Buy Airtime</div>
+          <div class="network-grid">
+            <div class="net-btn active" onclick="selectNet(this,'airtime','MTN')"><div class="net-icon">📡</div><div class="net-name">MTN</div></div>
+            <div class="net-btn" onclick="selectNet(this,'airtime','Airtel')"><div class="net-icon">🔴</div><div class="net-name">Airtel</div></div>
+            <div class="net-btn" onclick="selectNet(this,'airtime','Glo')"><div class="net-icon">🟢</div><div class="net-name">Glo</div></div>
+            <div class="net-btn" onclick="selectNet(this,'airtime','9mobile')"><div class="net-icon">🟡</div><div class="net-name">9mobile</div></div>
+          </div>
+          <div class="form-group"><label class="form-label">Phone Number</label><input class="form-input" id="air-phone" placeholder="08012345678" type="tel"></div>
+          <div class="form-group">
+            <label class="form-label">Select Amount</label>
+            <div class="amount-chips">
+              <div class="chip" onclick="selectChip(this,'air-amount',50)">₦50</div>
+              <div class="chip" onclick="selectChip(this,'air-amount',100)">₦100</div>
+              <div class="chip active" onclick="selectChip(this,'air-amount',200)">₦200</div>
+              <div class="chip" onclick="selectChip(this,'air-amount',500)">₦500</div>
+              <div class="chip" onclick="selectChip(this,'air-amount',1000)">₦1,000</div>
+            </div>
+            <input class="form-input" id="air-amount" value="200" placeholder="Or type amount">
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:4px;">
+            <button class="btn-sm" onclick="processVtu('airtime')">Buy Airtime</button>
+            <span style="font-size:.8rem;color:var(--muted)">Wallet: <span style="color:var(--gold)" id="air-bal-display">₦0</span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- DATA -->
+      <div id="vtu-data" class="svc-panel">
+        <div class="card">
+          <div class="card-title">Buy Data Bundle</div>
+          <div class="network-grid">
+            <div class="net-btn active" onclick="selectNet(this,'data','MTN')"><div class="net-icon">📡</div><div class="net-name">MTN</div></div>
+            <div class="net-btn" onclick="selectNet(this,'data','Airtel')"><div class="net-icon">🔴</div><div class="net-name">Airtel</div></div>
+            <div class="net-btn" onclick="selectNet(this,'data','Glo')"><div class="net-icon">🟢</div><div class="net-name">Glo</div></div>
+            <div class="net-btn" onclick="selectNet(this,'data','9mobile')"><div class="net-icon">🟡</div><div class="net-name">9mobile</div></div>
+          </div>
+          <div class="form-group"><label class="form-label">Phone Number</label><input class="form-input" id="data-phone" placeholder="08012345678" type="tel"></div>
+          <div class="form-group">
+            <label class="form-label">Select Bundle</label>
+            <div class="bundle-grid" id="bundle-grid"></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <button class="btn-sm" onclick="processVtu('data')">Buy Data</button>
+            <span style="font-size:.8rem;color:var(--muted)">Wallet: <span style="color:var(--gold)" id="data-bal-display">₦0</span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ELECTRICITY -->
+      <div id="vtu-electricity" class="svc-panel">
+        <div class="card">
+          <div class="card-title">Pay Electricity</div>
+          <div class="form-group">
+            <label class="form-label">Select DISCO</label>
+            <select class="form-input" id="disco-select">
+              <option>IKEDC (Ikeja Electric)</option>
+              <option>EKEDC (Eko Electric)</option>
+              <option>AEDC (Abuja Electric)</option>
+              <option>IBEDC (Ibadan Electric)</option>
+              <option>PHEDC (Port Harcourt Electric)</option>
+              <option>EEDC (Enugu Electric)</option>
+            </select>
+          </div>
+          <div class="form-group"><label class="form-label">Meter Number</label><input class="form-input" id="elec-meter" placeholder="Enter meter number"></div>
+          <div class="form-group">
+            <label class="form-label">Amount (₦)</label>
+            <div class="amount-chips">
+              <div class="chip" onclick="selectChip(this,'elec-amount',500)">₦500</div>
+              <div class="chip active" onclick="selectChip(this,'elec-amount',1000)">₦1,000</div>
+              <div class="chip" onclick="selectChip(this,'elec-amount',2000)">₦2,000</div>
+              <div class="chip" onclick="selectChip(this,'elec-amount',5000)">₦5,000</div>
+            </div>
+            <input class="form-input" id="elec-amount" value="1000" placeholder="Or type amount">
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <button class="btn-sm" onclick="processVtu('electricity')">Pay Now</button>
+            <span style="font-size:.8rem;color:var(--muted)">Wallet: <span style="color:var(--gold)" id="elec-bal-display">₦0</span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- CABLE TV -->
+      <div id="vtu-cable" class="svc-panel">
+        <div class="card">
+          <div class="card-title">Cable TV Subscription</div>
+          <div class="form-group">
+            <label class="form-label">Select Provider</label>
+            <div class="network-grid" style="grid-template-columns:repeat(3,1fr);">
+              <div class="net-btn active" onclick="selectNet(this,'cable','DSTV');loadCablePlans('DSTV')"><div class="net-icon">📡</div><div class="net-name">DSTV</div></div>
+              <div class="net-btn" onclick="selectNet(this,'cable','GOtv');loadCablePlans('GOtv')"><div class="net-icon">📺</div><div class="net-name">GOtv</div></div>
+              <div class="net-btn" onclick="selectNet(this,'cable','Startimes');loadCablePlans('Startimes')"><div class="net-icon">🌟</div><div class="net-name">Startimes</div></div>
+            </div>
+          </div>
+          <div class="form-group"><label class="form-label">Smart Card / IUC Number</label><input class="form-input" id="cable-card" placeholder="Enter smart card number"></div>
+          <div class="form-group">
+            <label class="form-label">Select Plan</label>
+            <div id="cable-plans"></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <button class="btn-sm" onclick="processVtu('cable')">Pay Subscription</button>
+            <span style="font-size:.8rem;color:var(--muted)">Wallet: <span style="color:var(--gold)" id="cable-bal-display">₦0</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CROWDFUNDING ── -->
+    <div id="page-causes" class="page">
+      <div class="causes-header">
+        <div>
+          <div class="page-title">Crowdfunding</div>
+          <div class="page-sub">Support causes that matter. Create yours in minutes.</div>
+        </div>
+        <button class="btn-sm" onclick="openModal('create-cause-modal')">+ Create Cause</button>
+      </div>
+
+      <div class="cat-filters" id="cat-filters">
+        <button class="cat-btn active" onclick="filterCauses(this,'all')">All</button>
+        <button class="cat-btn" onclick="filterCauses(this,'Health')">🏥 Health</button>
+        <button class="cat-btn" onclick="filterCauses(this,'Education')">📚 Education</button>
+        <button class="cat-btn" onclick="filterCauses(this,'Religion')">🕌 Religion</button>
+        <button class="cat-btn" onclick="filterCauses(this,'Emergency')">🚨 Emergency</button>
+        <button class="cat-btn" onclick="filterCauses(this,'Charity')">❤️ Charity</button>
+        <button class="cat-btn" onclick="filterCauses(this,'Business')">💼 Business</button>
+        <button class="cat-btn" onclick="filterCauses(this,'Community')">🏘️ Community</button>
+      </div>
+
+      <div class="causes-grid" id="causes-grid"></div>
+    </div>
+
+    <!-- ── AJO CIRCLES ── -->
+    <div id="page-ajo" class="page">
+      <div class="causes-header">
+        <div>
+          <div class="page-title">Ajo Circles</div>
+          <div class="page-sub">The Nigerian tradition of rotating savings — reimagined.</div>
+        </div>
+        <button class="btn-sm" onclick="openModal('create-ajo-modal')">+ Create Circle</button>
+      </div>
+      <div class="ajo-grid" id="ajo-grid"></div>
+    </div>
+
+    <!-- ── PROFILE ── -->
+    <div id="page-profile" class="page">
+      <div class="page-header">
+        <div class="page-title">My Profile</div>
+        <div class="page-sub">Your account details and preferences</div>
+      </div>
+
+      <div class="profile-hero">
+        <div class="profile-avatar-big" id="profile-avatar-big">M</div>
+        <div>
+          <div class="profile-name" id="profile-name">—</div>
+          <div class="profile-email" id="profile-email">—</div>
+        </div>
+        <div style="margin-left:auto;">
+          <button class="btn-outline-sm" onclick="openModal('edit-profile-modal')">Edit Profile</button>
+        </div>
+      </div>
+
+      <div class="profile-grid">
+        <div class="profile-field"><div class="pf-label">Full Name</div><div class="pf-value" id="pf-name">—</div></div>
+        <div class="profile-field"><div class="pf-label">Email Address</div><div class="pf-value" id="pf-email">—</div></div>
+        <div class="profile-field"><div class="pf-label">Phone Number</div><div class="pf-value" id="pf-phone">—</div></div>
+        <div class="profile-field"><div class="pf-label">Wallet Balance</div><div class="pf-value" style="color:var(--gold)" id="pf-bal">₦0.00</div></div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-title">Choose Avatar</div>
+        <div class="avatar-picker" id="avatar-picker"></div>
+      </div>
+
+      <button class="btn-danger-sm" onclick="doLogout()">Sign Out</button>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══════════════════════════════════════
+     MODALS
+══════════════════════════════════════ -->
+
+<!-- FUND WALLET -->
+<div class="modal-overlay" id="fund-modal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('fund-modal')">✕</button>
+    <div class="modal-title">Fund Wallet</div>
+    <div class="modal-sub">Use a Paystack test card — no real money charged</div>
+    <div class="form-group">
+      <label class="form-label">Amount (₦)</label>
+      <div class="amount-chips" style="margin-bottom:12px">
+        <div class="chip" onclick="selectChip(this,'fund-amount',1000)">₦1,000</div>
+        <div class="chip active" onclick="selectChip(this,'fund-amount',5000)">₦5,000</div>
+        <div class="chip" onclick="selectChip(this,'fund-amount',10000)">₦10,000</div>
+        <div class="chip" onclick="selectChip(this,'fund-amount',20000)">₦20,000</div>
+      </div>
+      <input class="form-input" id="fund-amount" value="5000" placeholder="Enter amount">
+    </div>
+    <div style="background:var(--surface2);border:1px solid var(--border-light);padding:14px;margin-bottom:20px;font-size:.78rem;color:var(--muted);line-height:1.7;">
+      <strong style="color:var(--gold);display:block;margin-bottom:6px;">🧪 Paystack Test Card Details</strong>
+      Card: <strong style="color:var(--white)">4084 4084 4084 4084</strong><br>
+      Expiry: <strong style="color:var(--white)">any future date</strong> &nbsp; CVV: <strong style="color:var(--white)">408</strong><br>
+      PIN: <strong style="color:var(--white)">0000</strong> &nbsp; OTP: <strong style="color:var(--white)">123456</strong>
+    </div>
+    <button class="btn-primary" onclick="initPaystack()">Proceed to Pay</button>
+  </div>
+</div>
+
+<!-- CAUSE DETAIL -->
+<div class="modal-overlay" id="cause-detail-modal">
+  <div class="modal-box" style="max-width:540px;">
+    <button class="modal-close" onclick="closeModal('cause-detail-modal')">✕</button>
+    <div id="cause-detail-content"></div>
+  </div>
+</div>
+
+<!-- CREATE CAUSE -->
+<div class="modal-overlay" id="create-cause-modal">
+  <div class="modal-box" style="max-width:540px;max-height:90vh;overflow-y:auto;">
+    <button class="modal-close" onclick="closeModal('create-cause-modal')">✕</button>
+    <div class="modal-title">Create a Cause</div>
+    <div class="modal-sub">Tell your story and start raising funds</div>
+    <div class="form-group"><label class="form-label">Cause Title</label><input class="form-input" id="cc-title" placeholder="e.g. Help fund Ahmed's surgery"></div>
+    <div class="form-group"><label class="form-label">Category</label>
+      <select class="form-input" id="cc-cat">
+        <option>Health</option><option>Education</option><option>Religion</option>
+        <option>Emergency</option><option>Charity</option><option>Business</option>
+        <option>Community</option><option>Memorial</option>
+      </select>
+    </div>
+    <div class="form-group"><label class="form-label">Description</label><textarea class="form-input" id="cc-desc" rows="3" placeholder="Tell people about your cause..."></textarea></div>
+    <div class="form-group"><label class="form-label">Target Amount (₦)</label><input class="form-input" id="cc-target" type="number" placeholder="e.g. 500000"></div>
+    <div class="form-group"><label class="form-label">End Date</label><input class="form-input" id="cc-date" type="date"></div>
+    <div class="form-group">
+      <label class="form-label">Cause Icon (emoji)</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;" id="cause-emoji-picker">
+        <span style="font-size:1.6rem;cursor:pointer;padding:4px;border:1px solid transparent;transition:border .2s" onclick="selectEmoji(this)" data-emoji="❤️">❤️</span>
+        <span style="font-size:1.6rem;cursor:pointer;padding:4px;border:1px solid transparent;transition:border .2s" onclick="selectEmoji(this)" data-emoji="🏥">🏥</span>
+        <span style="font-size:1.6rem;cursor:pointer;padding:4px;border:1px solid transparent;transition:border .2s" onclick="selectEmoji(this)" data-emoji="📚">📚</span>
+        <span style="font-size:1.6rem;cursor:pointer;padding:4px;border:1px solid transparent;transition:border .2s" onclick="selectEmoji(this)" data-emoji="🕌">🕌</span>
+        <span style="font-size:1.6rem;cursor:pointer;padding:4px;border:1px solid transparent;transition:border .2s" onclick="selectEmoji(this)" data-emoji="🚨">🚨</span>
+        <span style="font-size:1.6rem;cursor:pointer;padding:4px;border:1px solid transparent;transition:border .2s" onclick="selectEmoji(this)" data-emoji="🌱">🌱</span>
+        <span style="font-size:1.6rem;cursor:pointer;padding:4px;border:1px solid transparent;transition:border .2s" onclick="selectEmoji(this)" data-emoji="💼">💼</span>
+        <span style="font-size:1.6rem;cursor:pointer;padding:4px;border:1px solid transparent;transition:border .2s" onclick="selectEmoji(this)" data-emoji="🏘️">🏘️</span>
+      </div>
+    </div>
+    <button class="btn-primary" onclick="createCause()">Launch Cause</button>
+  </div>
+</div>
+
+<!-- CREATE AJO -->
+<div class="modal-overlay" id="create-ajo-modal">
+  <div class="modal-box" style="max-width:520px;max-height:90vh;overflow-y:auto;">
+    <button class="modal-close" onclick="closeModal('create-ajo-modal')">✕</button>
+    <div class="modal-title">Create Ajo Circle</div>
+    <div class="modal-sub">Set up your rotating savings group</div>
+    <div class="form-group"><label class="form-label">Circle Name</label><input class="form-input" id="aj-name" placeholder="e.g. Market Women Ajo"></div>
+    <div class="form-group"><label class="form-label">Description</label><textarea class="form-input" id="aj-desc" rows="2" placeholder="What's this group about?"></textarea></div>
+    <div class="form-group"><label class="form-label">Contribution per Session (₦)</label><input class="form-input" id="aj-amount" type="number" placeholder="e.g. 10000"></div>
+    <div class="form-group"><label class="form-label">Withdrawal Session</label>
+      <select class="form-input" id="aj-cycle">
+        <option value="Weekly">Weekly (Default)</option>
+        <option value="Daily">Daily</option>
+        <option value="Every 2 Weeks">Every 2 Weeks</option>
+        <option value="Monthly">Monthly</option>
+      </select>
+    </div>
+    <div class="form-group"><label class="form-label">Invite Member (phone number)</label>
+      <div style="display:flex;gap:8px;">
+        <input class="form-input" id="aj-invite" placeholder="08012345678" style="flex:1">
+        <button class="btn-outline-sm" onclick="addAjoInvite()">Add</button>
+      </div>
+      <div id="aj-invites" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Group Banner Emoji</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;" id="ajo-emoji-picker">
+        <span style="font-size:1.6rem;cursor:pointer;padding:4px;border:1px solid transparent;transition:border .2s" onclick="selectAjoEmoji(this)" data-emoji="💰">💰</span>
+        <span style="font-size:1.6rem;cursor:pointer;padding:4px;border:1px solid transparent;transition:border .2s" onclick="selectAjoEmoji(this)" data-emoji="🤝">🤝</span>
+        <span style="font-size:1.6rem;cursor:pointer;padding:4px;border:1px solid transparent;transition:border .2s" onclick="selectAjoEmoji(this)" data-emoji="👩‍👩‍👧">👩‍👩‍👧</span>
+        <span style="font-size:1.6rem;cursor:pointer;padding:4px;border:1px solid transparent;transition:border .2s" onclick="selectAjoEmoji(this)" data-emoji="🏦">🏦</span>
+        <span style="font-size:1.6rem;cursor:pointer;padding:4px;border:1px solid transparent;transition:border .2s" onclick="selectAjoEmoji(this)" data-emoji="🌟">🌟</span>
+        <span style="font-size:1.6rem;cursor:pointer;padding:4px;border:1px solid transparent;transition:border .2s" onclick="selectAjoEmoji(this)" data-emoji="🇳🇬">🇳🇬</span>
+      </div>
+    </div>
+    <button class="btn-primary" onclick="createAjo()">Create Circle</button>
+  </div>
+</div>
+
+<!-- EDIT PROFILE -->
+<div class="modal-overlay" id="edit-profile-modal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('edit-profile-modal')">✕</button>
+    <div class="modal-title">Edit Profile</div>
+    <div class="modal-sub">Update your account details</div>
+    <div class="form-group"><label class="form-label">Full Name</label><input class="form-input" id="ep-name" placeholder="Your full name"></div>
+    <div class="form-group"><label class="form-label">Phone Number</label><input class="form-input" id="ep-phone" placeholder="08012345678" type="tel"></div>
+    <button class="btn-primary" onclick="saveProfile()">Save Changes</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SCRIPT
+══════════════════════════════════════ -->
+<script>
+// ─── CONFIG ─────────────────────────────────────────────────────────────────
+// Replace with your Paystack TEST public key from dashboard.paystack.com
+const PAYSTACK_KEY = 'pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
+
+// ─── STATE ──────────────────────────────────────────────────────────────────
+const AVATARS = ['🧑🏾','👩🏿','👨🏽','👩🏾‍💼','👨🏿‍💻','🧕🏽','👨🏾‍🎓','👩🏽‍⚕️','🧔🏿','👱🏾‍♀️','🧑🏽‍🎨','👴🏿'];
+
+let state = {
+  user: null,
+  balance: 0,
+  transactions: [],
+  causes: [],
+  ajos: [],
+  selectedNets: { airtime:'MTN', data:'MTN', cable:'DSTV' },
+  selectedBundle: null,
+  selectedCablePlan: null,
+  selectedCauseEmoji: '❤️',
+  selectedAjoEmoji: '💰',
+  ajoInvites: []
+};
+
+function loadState() {
+  const saved = localStorage.getItem('maurpay_demo');
+  if (saved) {
+    const parsed = JSON.parse(saved);
+    state = { ...state, ...parsed };
+  }
+}
+function saveState() {
+  localStorage.setItem('maurpay_demo', JSON.stringify(state));
+}
+
+// ─── DEMO CAUSES ────────────────────────────────────────────────────────────
+const DEMO_CAUSES = [
+  { id:'dc1', title:"Help Adaeze Complete Her Education", cat:"Education", desc:"Adaeze scored 312 in JAMB and got admission to study Medicine. Her family can't afford the first year. Let's give her a future.", target:500000, raised:312000, emoji:"📚", status:"active", endDate:"2025-06-01", creator:"Ngozi Obi" },
+  { id:'dc2', title:"Rebuild Our Community Mosque After Fire", cat:"Religion", desc:"The Central Mosque in Kano was gutted by fire last month. The community has been gathering in the open. Help us rebuild.", target:2000000, raised:887000, emoji:"🕌", status:"active", endDate:"2025-07-15", creator:"Mallam Suleiman" },
+  { id:'dc3', title:"Emergency Surgery for Baby Tolu", cat:"Health", desc:"8-month-old Tolu needs urgent open-heart surgery. Her parents are civil servants in Ibadan who can't afford ₦800,000. Please help.", target:800000, raised:620000, emoji:"🏥", status:"active", endDate:"2025-05-20", creator:"Funke Adeola" },
+  { id:'dc4', title:"Flood Relief for Kogi Families", cat:"Emergency", desc:"Over 400 families were displaced by the Kogi flooding last week. We need food, clothing, and temporary shelter.", target:3000000, raised:1450000, emoji:"🚨", status:"active", endDate:"2025-05-30", creator:"Kogi Volunteers" },
+  { id:'dc5', title:"Feed 500 Orphans This Christmas", cat:"Charity", desc:"Our charity visits four orphanages in Lagos and Ogun every December. Help us provide meals and gifts for 500 children.", target:1200000, raised:950000, emoji:"❤️", status:"active", endDate:"2025-12-20", creator:"Blessings Foundation" },
+  { id:'dc6', title:"Startup Capital for Amaka's Fashion Line", cat:"Business", desc:"Amaka makes gorgeous Ankara-inspired ready-to-wear. She has buyers and a pop-up slot — she just needs machines and fabric.", target:600000, raised:210000, emoji:"💼", status:"active", endDate:"2025-08-01", creator:"Amaka Nwosu" },
+];
+
+const DEMO_AJOS = [
+  { id:'daj1', name:"Lagos Market Women Circle", desc:"Weekly Ajo for 10 market women at Balogun Market. ₦5,000 each per week.", amount:5000, cycle:"Weekly", members:["08012","08023","08034","08045","08056","08067"], emoji:"💰", banner:"💰", creator:"Mama Chioma" },
+  { id:'daj2', name:"Tech Bros Monthly Savings", desc:"Monthly savings circle for young professionals in the tech industry. ₦20,000 monthly.", amount:20000, cycle:"Monthly", members:["08071","08082","08093","08014"], emoji:"💻", banner:"🏦", creator:"Tunde Dev" },
+  { id:'daj3', name:"Abuja Sisters Thrift", desc:"Biweekly thrift group for 6 working women in Abuja. Trusted, transparent, automated.", amount:10000, cycle:"Every 2 Weeks", members:["08055","08066","08077","08088","08099","08011"], emoji:"🤝", banner:"🤝", creator:"Fatima A." },
+];
+
+// ─── AUTH ────────────────────────────────────────────────────────────────────
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='register')));
+  document.getElementById('login-form').style.display = tab==='login'?'block':'none';
+  document.getElementById('register-form').style.display = tab==='register'?'block':'none';
+}
+
+function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-password').value;
+  if (!email || !pass) { showToast('Please fill in all fields','error'); return; }
+  if (!email.includes('@')) { showToast('Enter a valid email','error'); return; }
+  // Accept any credentials
+  const existing = JSON.parse(localStorage.getItem('maurpay_user_'+email) || 'null');
+  if (existing) {
+    state.user = existing;
+  } else {
+    state.user = { name: email.split('@')[0], email, phone: '', avatar: '🧑🏾' };
+  }
+  saveState();
+  bootApp();
+}
+
+function doRegister() {
+  const name = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const phone = document.getElementById('reg-phone').value.trim();
+  const pass = document.getElementById('reg-password').value;
+  if (!name||!email||!phone||!pass) { showToast('Please fill in all fields','error'); return; }
+  if (!email.includes('@')) { showToast('Enter a valid email','error'); return; }
+  state.user = { name, email, phone, avatar: '🧑🏾' };
+  localStorage.setItem('maurpay_user_'+email, JSON.stringify(state.user));
+  saveState();
+  bootApp();
+}
+
+function doLogout() {
+  state.user = null;
+  document.getElementById('app-wrapper').classList.remove('visible');
+  document.getElementById('auth-screen').style.display = 'flex';
+  showToast('Signed out');
+}
+
+// ─── BOOT APP ────────────────────────────────────────────────────────────────
+function bootApp() {
+  if (!state.causes || state.causes.length === 0) state.causes = JSON.parse(JSON.stringify(DEMO_CAUSES));
+  if (!state.ajos || state.ajos.length === 0) state.ajos = JSON.parse(JSON.stringify(DEMO_AJOS));
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app-wrapper').classList.add('visible');
+  refreshUI();
+  goTo('dashboard');
+  renderCauses();
+  renderAjos();
+  renderAvatarPicker();
+  loadCablePlans('DSTV');
+  renderBundles();
+  document.getElementById('dash-date').textContent = new Date().toLocaleDateString('en-NG',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+}
+
+function refreshUI() {
+  const u = state.user;
+  if (!u) return;
+  const initials = u.name ? u.name[0].toUpperCase() : 'M';
+  // Sidebar
+  document.getElementById('sb-uname').textContent = u.name || u.email;
+  document.getElementById('sb-uemail').textContent = u.email;
+  document.getElementById('sb-balance').textContent = fmtNum(state.balance);
+  // Avatar
+  const isEmoji = u.avatar && u.avatar.length <= 4;
+  ['sb-avatar','tb-avatar'].forEach(id => {
+    const el = document.getElementById(id);
+    el.textContent = isEmoji ? u.avatar : initials;
+  });
+  // Topbar
+  document.getElementById('tb-balance').textContent = '₦'+fmtNum(state.balance);
+  // Dashboard
+  document.getElementById('dash-name').textContent = (u.name||'').split(' ')[0] || 'there';
+  document.getElementById('dash-balance').textContent = fmtNum(state.balance);
+  // Profile
+  document.getElementById('profile-avatar-big').textContent = isEmoji ? u.avatar : initials;
+  document.getElementById('profile-name').textContent = u.name || '—';
+  document.getElementById('profile-email').textContent = u.email || '—';
+  document.getElementById('pf-name').textContent = u.name || '—';
+  document.getElementById('pf-email').textContent = u.email || '—';
+  document.getElementById('pf-phone').textContent = u.phone || 'Not set';
+  document.getElementById('pf-bal').textContent = '₦'+fmtNum(state.balance);
+  // VTU bal displays
+  ['air-bal-display','data-bal-display','elec-bal-display','cable-bal-display'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '₦'+fmtNum(state.balance);
+  });
+  renderTxList();
+  renderDashCauses();
+}
+
+// ─── NAVIGATION ──────────────────────────────────────────────────────────────
+function goTo(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  // Sidebar links
+  document.querySelectorAll('.sb-link').forEach(l => {
+    l.classList.toggle('active', l.getAttribute('onclick')?.includes("'"+page+"'"));
+  });
+  // Bottom nav
+  document.querySelectorAll('.bn-item').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('onclick')?.includes("'"+page+"'"));
+  });
+  window.scrollTo(0,0);
+}
+
+function openVtuTab(tab) {
+  goTo('vtu');
+  setTimeout(() => switchVtu(tab), 50);
+}
+
+// ─── PAYSTACK ────────────────────────────────────────────────────────────────
+function initPaystack() {
+  const amount = parseInt(document.getElementById('fund-amount').value);
+  if (!amount || amount < 100) { showToast('Minimum funding amount is ₦100','error'); return; }
+  if (!state.user) return;
+
+  try {
+    const handler = PaystackPop.setup({
+      key: PAYSTACK_KEY,
+      email: state.user.email,
+      amount: amount * 100,
+      currency: 'NGN',
+      ref: 'MP_'+Date.now(),
+      metadata: { custom_fields:[{ display_name:'Platform', variable_name:'platform', value:'MaurPay Demo' }] },
+      callback: function(response) {
+        closeModal('fund-modal');
+        state.balance += amount;
+        addTransaction({ type:'credit', label:'Wallet Funding via Paystack', amount, ref:response.reference });
+        saveState(); refreshUI();
+        showToast('₦'+fmtNum(amount)+' added to wallet 🎉','success');
+      },
+      onClose: function() { showToast('Payment cancelled'); }
+    });
+    handler.openIframe();
+  } catch(e) {
+    // If Paystack key is placeholder, simulate for demo
+    closeModal('fund-modal');
+    state.balance += amount;
+    addTransaction({ type:'credit', label:'Wallet Funding (Demo)', amount, ref:'DEMO_'+Date.now() });
+    saveState(); refreshUI();
+    showToast('₦'+fmtNum(amount)+' added to wallet (demo) 🎉','success');
+  }
+}
+
+// ─── VTU ─────────────────────────────────────────────────────────────────────
+function switchVtu(tab) {
+  document.querySelectorAll('.svc-tab').forEach((t,i) => {
+    const tabs = ['airtime','data','electricity','cable'];
+    t.classList.toggle('active', tabs[i] === tab);
+  });
+  document.querySelectorAll('.svc-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('vtu-'+tab).classList.add('active');
+}
+
+function selectNet(el, type, net) {
+  el.closest('.network-grid').querySelectorAll('.net-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  state.selectedNets[type] = net;
+  if (type === 'data') renderBundles();
+  if (type === 'cable') loadCablePlans(net);
+}
+
+function selectChip(el, inputId, val) {
+  el.closest('.amount-chips').querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById(inputId).value = val;
+}
+
+const DATA_BUNDLES = {
+  MTN:    [{size:'500MB',validity:'1 Day',price:150},{size:'1GB',validity:'1 Day',price:300},{size:'2GB',validity:'2 Days',price:500},{size:'5GB',validity:'7 Days',price:1200},{size:'10GB',validity:'30 Days',price:2500},{size:'25GB',validity:'30 Days',price:5500}],
+  Airtel: [{size:'500MB',validity:'1 Day',price:200},{size:'1.5GB',validity:'1 Day',price:400},{size:'3GB',validity:'7 Days',price:800},{size:'6GB',validity:'7 Days',price:1500},{size:'12GB',validity:'30 Days',price:3000},{size:'30GB',validity:'30 Days',price:6000}],
+  Glo:    [{size:'1GB',validity:'1 Day',price:200},{size:'2GB',validity:'2 Days',price:400},{size:'5GB',validity:'7 Days',price:1000},{size:'10GB',validity:'30 Days',price:2000},{size:'25GB',validity:'30 Days',price:4500},{size:'50GB',validity:'30 Days',price:8000}],
+  '9mobile':[{size:'500MB',validity:'1 Day',price:150},{size:'1GB',validity:'1 Day',price:300},{size:'2.5GB',validity:'7 Days',price:700},{size:'5GB',validity:'30 Days',price:1500},{size:'10GB',validity:'30 Days',price:2800},{size:'20GB',validity:'30 Days',price:5000}],
+};
+const CABLE_PLANS = {
+  DSTV: [{name:'Padi',price:1850},{name:'Yanga',price:2565},{name:'Confam',price:4615},{name:'Compact',price:9000},{name:'Compact Plus',price:14250},{name:'Premium',price:24500}],
+  GOtv: [{name:'Smallie',price:900},{name:'Jinja',price:1640},{name:'Jolli',price:2460},{name:'Max',price:3600},{name:'Supa',price:4850}],
+  Startimes: [{name:'Nova',price:900},{name:'Basic',price:1700},{name:'Smart',price:2600},{name:'Classic',price:3300},{name:'Super',price:5100}],
+};
+
+function renderBundles() {
+  const net = state.selectedNets.data || 'MTN';
+  const bundles = DATA_BUNDLES[net] || DATA_BUNDLES.MTN;
+  const grid = document.getElementById('bundle-grid');
+  grid.innerHTML = bundles.map((b,i) => `
+    <div class="bundle-item${i===0?' selected':''}" onclick="selectBundle(this,${b.price},'${b.size}')">
+      <div class="bundle-size">${b.size}</div>
+      <div class="bundle-validity">${b.validity}</div>
+      <div class="bundle-price">₦${fmtNum(b.price)}</div>
+    </div>`).join('');
+  state.selectedBundle = { price:bundles[0].price, size:bundles[0].size };
+}
+
+function selectBundle(el, price, size) {
+  el.closest('.bundle-grid').querySelectorAll('.bundle-item').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  state.selectedBundle = { price, size };
+}
+
+function loadCablePlans(provider) {
+  const plans = CABLE_PLANS[provider] || CABLE_PLANS.DSTV;
+  const wrap = document.getElementById('cable-plans');
+  wrap.innerHTML = plans.map((p,i) => `
+    <div class="bundle-item${i===0?' selected':''}" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;" onclick="selectCablePlan(this,${p.price},'${p.name}')">
+      <div style="font-family:'Syne',sans-serif;font-weight:600;font-size:.88rem;">${p.name}</div>
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;color:var(--gold);">₦${fmtNum(p.price)}/mo</div>
+    </div>`).join('');
+  state.selectedCablePlan = { price:plans[0].price, name:plans[0].name };
+}
+
+function selectCablePlan(el, price, name) {
+  el.parentElement.querySelectorAll('.bundle-item').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  state.selectedCablePlan = { price, name };
+}
+
+function processVtu(type) {
+  let amount=0, label='', valid=true, details='';
+  if (type==='airtime') {
+    amount = parseInt(document.getElementById('air-amount').value);
+    const phone = document.getElementById('air-phone').value.trim();
+    if (!phone) { showToast('Enter a phone number','error'); return; }
+    label = `${state.selectedNets.airtime} Airtime — ${phone}`;
+    details = phone;
+  } else if (type==='data') {
+    if (!state.selectedBundle) { showToast('Select a data bundle','error'); return; }
+    amount = state.selectedBundle.price;
+    const phone = document.getElementById('data-phone').value.trim();
+    if (!phone) { showToast('Enter a phone number','error'); return; }
+    label = `${state.selectedNets.data} ${state.selectedBundle.size} Data — ${phone}`;
+  } else if (type==='electricity') {
+    amount = parseInt(document.getElementById('elec-amount').value);
+    const meter = document.getElementById('elec-meter').value.trim();
+    const disco = document.getElementById('disco-select').value;
+    if (!meter) { showToast('Enter meter number','error'); return; }
+    label = `${disco} — ${meter}`;
+  } else if (type==='cable') {
+    if (!state.selectedCablePlan) { showToast('Select a plan','error'); return; }
+    amount = state.selectedCablePlan.price;
+    const card = document.getElementById('cable-card').value.trim();
+    if (!card) { showToast('Enter smart card number','error'); return; }
+    label = `${state.selectedNets.cable} ${state.selectedCablePlan.name} — ${card}`;
+  }
+  if (!amount||amount<1) { showToast('Enter a valid amount','error'); return; }
+  if (state.balance < amount) { showToast('Insufficient wallet balance. Fund your wallet first.','error'); return; }
+  state.balance -= amount;
+  addTransaction({ type:'debit', label, amount, ref:'VTU_'+Date.now() });
+  saveState(); refreshUI();
+  showToast('✅ '+label+' — Successful!','success');
+}
+
+// ─── CROWDFUNDING ────────────────────────────────────────────────────────────
+function renderCauses(filter='all') {
+  const grid = document.getElementById('causes-grid');
+  const list = filter==='all' ? state.causes : state.causes.filter(c=>c.cat===filter);
+  if (!list.length) { grid.innerHTML='<div class="tx-empty" style="grid-column:1/-1">No causes in this category yet.</div>'; return; }
+  grid.innerHTML = list.map(c => {
+    const pct = Math.min(100, Math.round((c.raised/c.target)*100));
+    return `<div class="cause-card" onclick="openCause('${c.id}')">
+      <div class="cause-img">${c.emoji}</div>
+      <div class="cause-body">
+        <div class="cause-cat">${c.cat}</div>
+        <div class="cause-title">${c.title}</div>
+        <div class="cause-desc">${c.desc}</div>
+        <div class="progress-wrap">
+          <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
+          <div class="progress-stats"><span class="progress-raised">₦${fmtNum(c.raised)}</span><span class="progress-target">of ₦${fmtNum(c.target)}</span></div>
+        </div>
+        <div class="cause-footer">
+          <span class="cause-status active">${pct}% funded</span>
+          <span class="tag tag-teal">${c.cat}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterCauses(btn, cat) {
+  document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderCauses(cat);
+}
+
+function openCause(id) {
+  const c = state.causes.find(x=>x.id===id);
+  if (!c) return;
+  const pct = Math.min(100,Math.round((c.raised/c.target)*100));
+  document.getElementById('cause-detail-content').innerHTML = `
+    <div class="cause-detail-img">${c.emoji}</div>
+    <div class="tag tag-teal" style="margin-bottom:12px">${c.cat}</div>
+    <div class="modal-title" style="margin-bottom:8px">${c.title}</div>
+    <p style="color:var(--muted);font-size:.88rem;line-height:1.7;margin-bottom:20px;">${c.desc}</p>
+    <div class="progress-bar-bg" style="margin-bottom:6px"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
+    <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:20px;">
+      <span style="color:var(--gold);font-family:'Syne',sans-serif;font-weight:700;">₦${fmtNum(c.raised)} raised</span>
+      <span style="color:var(--muted)">Target: ₦${fmtNum(c.target)}</span>
+    </div>
+    <div style="font-size:.75rem;color:var(--muted);font-family:'Syne Mono',monospace;margin-bottom:20px;">Created by ${c.creator} · Ends ${c.endDate}</div>
+    <div class="donate-split">
+      <button class="donate-tab active" onclick="switchDonateTab(this,'wallet')">From Wallet</button>
+      <button class="donate-tab" onclick="switchDonateTab(this,'paystack')">Pay Online</button>
+    </div>
+    <div id="donate-wallet-panel">
+      <div style="background:var(--surface2);border:1px solid var(--border-light);padding:14px;margin-bottom:16px;font-size:.82rem;color:var(--muted);">
+        Wallet balance: <strong style="color:var(--gold)">₦${fmtNum(state.balance)}</strong>
+      </div>
+      <div class="amount-chips" style="margin-bottom:12px">
+        <div class="chip" onclick="selectChip(this,'donate-amount',500)">₦500</div>
+        <div class="chip active" onclick="selectChip(this,'donate-amount',1000)">₦1,000</div>
+        <div class="chip" onclick="selectChip(this,'donate-amount',2000)">₦2,000</div>
+        <div class="chip" onclick="selectChip(this,'donate-amount',5000)">₦5,000</div>
+      </div>
+      <input class="form-input" id="donate-amount" value="1000" placeholder="Or type amount" style="margin-bottom:16px">
+      <button class="btn-primary" onclick="donateFromWallet('${c.id}')">Donate from Wallet</button>
+    </div>
+    <div id="donate-paystack-panel" style="display:none">
+      <div class="amount-chips" style="margin-bottom:12px">
+        <div class="chip" onclick="selectChip(this,'donate-pay-amount',1000)">₦1,000</div>
+        <div class="chip active" onclick="selectChip(this,'donate-pay-amount',2000)">₦2,000</div>
+        <div class="chip" onclick="selectChip(this,'donate-pay-amount',5000)">₦5,000</div>
+        <div class="chip" onclick="selectChip(this,'donate-pay-amount',10000)">₦10,000</div>
+      </div>
+      <input class="form-input" id="donate-pay-amount" value="2000" placeholder="Or type amount" style="margin-bottom:16px">
+      <button class="btn-primary" onclick="donateViaPaystack('${c.id}')">Donate via Paystack</button>
+    </div>
+    <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border-light);display:flex;align-items:center;gap:8px;">
+      <span style="font-size:.72rem;color:var(--muted)">Share:</span>
+      <button class="btn-outline-sm" onclick="copyLink('${c.id}')">Copy Link 🔗</button>
+    </div>`;
+  openModal('cause-detail-modal');
+}
+
+function switchDonateTab(btn, tab) {
+  document.querySelectorAll('.donate-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('donate-wallet-panel').style.display = tab==='wallet'?'block':'none';
+  document.getElementById('donate-paystack-panel').style.display = tab==='paystack'?'block':'none';
+}
+
+function donateFromWallet(causeId) {
+  const amount = parseInt(document.getElementById('donate-amount').value);
+  if (!amount||amount<1) { showToast('Enter a valid amount','error'); return; }
+  if (state.balance < amount) { showToast('Insufficient wallet balance','error'); return; }
+  const cause = state.causes.find(c=>c.id===causeId);
+  if (!cause) return;
+  state.balance -= amount;
+  cause.raised += amount;
+  addTransaction({ type:'debit', label:'Donated to: '+cause.title, amount, ref:'DON_'+Date.now() });
+  saveState(); refreshUI(); renderCauses(); renderDashCauses();
+  closeModal('cause-detail-modal');
+  showToast('₦'+fmtNum(amount)+' donated to '+cause.title+' 🙏','success');
+}
+
+function donateViaPaystack(causeId) {
+  const amount = parseInt(document.getElementById('donate-pay-amount').value);
+  if (!amount||amount<1) { showToast('Enter a valid amount','error'); return; }
+  const cause = state.causes.find(c=>c.id===causeId);
+  try {
+    const handler = PaystackPop.setup({
+      key: PAYSTACK_KEY,
+      email: state.user.email,
+      amount: amount*100,
+      currency: 'NGN',
+      ref: 'DON_'+Date.now(),
+      callback: function(response) {
+        cause.raised += amount;
+        addTransaction({ type:'debit', label:'Donated to: '+cause.title, amount, ref:response.reference });
+        saveState(); refreshUI(); renderCauses(); renderDashCauses();
+        closeModal('cause-detail-modal');
+        showToast('₦'+fmtNum(amount)+' donated! Thank you 🙏','success');
+      },
+      onClose: function() { showToast('Donation cancelled'); }
+    });
+    handler.openIframe();
+  } catch(e) {
+    cause.raised += amount;
+    addTransaction({ type:'debit', label:'Donated to: '+cause.title+' (demo)', amount, ref:'DON_'+Date.now() });
+    saveState(); refreshUI(); renderCauses(); renderDashCauses();
+    closeModal('cause-detail-modal');
+    showToast('₦'+fmtNum(amount)+' donated (demo) 🙏','success');
+  }
+}
+
+function createCause() {
+  const title = document.getElementById('cc-title').value.trim();
+  const cat = document.getElementById('cc-cat').value;
+  const desc = document.getElementById('cc-desc').value.trim();
+  const target = parseInt(document.getElementById('cc-target').value);
+  const endDate = document.getElementById('cc-date').value;
+  if (!title||!desc||!target) { showToast('Please fill in all fields','error'); return; }
+  const cause = { id:'uc'+Date.now(), title, cat, desc, target, raised:0, emoji:state.selectedCauseEmoji, status:'active', endDate:endDate||'2025-12-31', creator:state.user.name };
+  state.causes.unshift(cause);
+  saveState(); renderCauses();
+  closeModal('create-cause-modal');
+  showToast('Cause launched! 🎯','success');
+  ['cc-title','cc-desc','cc-target','cc-date'].forEach(id=>document.getElementById(id).value='');
+}
+
+function selectEmoji(el) {
+  document.querySelectorAll('#cause-emoji-picker span').forEach(s=>s.style.border='1px solid transparent');
+  el.style.border='1px solid var(--gold)';
+  state.selectedCauseEmoji = el.dataset.emoji;
+}
+
+function copyLink(id) {
+  navigator.clipboard?.writeText(window.location.href+'#cause-'+id).catch(()=>{});
+  showToast('Link copied! 🔗','success');
+}
+
+// ─── AJO ─────────────────────────────────────────────────────────────────────
+function renderAjos() {
+  const grid = document.getElementById('ajo-grid');
+  grid.innerHTML = state.ajos.map(a => `
+    <div class="ajo-card">
+      <div class="ajo-banner">${a.banner||a.emoji}</div>
+      <div class="ajo-name">${a.name}</div>
+      <div class="ajo-desc">${a.desc}</div>
+      <div class="ajo-meta">
+        <span class="tag tag-gold">${a.cycle}</span>
+        <span class="tag tag-teal">₦${fmtNum(a.amount)}/session</span>
+      </div>
+      <div class="ajo-members">
+        ${a.members.slice(0,5).map((_,i) => `<div class="ajo-m-dot" style="background:${['#e8b84b','#00c9a7','#7c5cbf','#e85757','#5b9ef5'][i%5]};color:#000;">${i+1}</div>`).join('')}
+        ${a.members.length>5?`<div class="ajo-m-dot ajo-m-more">+${a.members.length-5}</div>`:''}
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-sm" onclick="joinAjo('${a.id}')">Join Circle</button>
+        <button class="btn-outline-sm" onclick="viewAjo('${a.id}')">View Details</button>
+      </div>
+    </div>`).join('');
+}
+
+function joinAjo(id) {
+  const ajo = state.ajos.find(a=>a.id===id);
+  if (!ajo) return;
+  const myPhone = state.user.phone || '0800000000';
+  if (ajo.members.includes(myPhone)) { showToast('You are already in this circle'); return; }
+  ajo.members.push(myPhone);
+  saveState(); renderAjos();
+  showToast(`Joined "${ajo.name}"! Your ID is #${ajo.members.length} 🎉`,'success');
+}
+
+function viewAjo(id) {
+  const a = state.ajos.find(x=>x.id===id);
+  if (!a) return;
+  showToast(`${a.name} · ${a.members.length} members · Next withdrawal: ${a.cycle}`);
+}
+
+function createAjo() {
+  const name = document.getElementById('aj-name').value.trim();
+  const desc = document.getElementById('aj-desc').value.trim();
+  const amount = parseInt(document.getElementById('aj-amount').value);
+  const cycle = document.getElementById('aj-cycle').value;
+  if (!name||!desc||!amount) { showToast('Please fill in all fields','error'); return; }
+  const ajo = {
+    id:'uaj'+Date.now(), name, desc, amount, cycle,
+    members: [state.user.phone||'080CREATOR', ...state.ajoInvites],
+    emoji: state.selectedAjoEmoji, banner: state.selectedAjoEmoji,
+    creator: state.user.name
+  };
+  state.ajos.unshift(ajo);
+  state.ajoInvites = [];
+  saveState(); renderAjos();
+  closeModal('create-ajo-modal');
+  showToast(`"${name}" created! You are member #1 🎉`,'success');
+  ['aj-name','aj-desc','aj-amount'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('aj-invites').innerHTML='';
+}
+
+function addAjoInvite() {
+  const phone = document.getElementById('aj-invite').value.trim();
+  if (!phone||phone.length<10) { showToast('Enter a valid phone number','error'); return; }
+  if (state.ajoInvites.includes(phone)) { showToast('Already added'); return; }
+  state.ajoInvites.push(phone);
+  const wrap = document.getElementById('aj-invites');
+  const tag = document.createElement('div');
+  tag.style.cssText='display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border-light);padding:4px 10px;font-size:.72rem;font-family:"Syne Mono",monospace;';
+  tag.innerHTML = phone+`<span style="cursor:pointer;color:var(--muted)" onclick="removeInvite(this,'${phone}')">✕</span>`;
+  wrap.appendChild(tag);
+  document.getElementById('aj-invite').value='';
+  showToast('Invite added: '+phone,'success');
+}
+
+function removeInvite(el, phone) {
+  state.ajoInvites = state.ajoInvites.filter(p=>p!==phone);
+  el.parentElement.remove();
+}
+
+function selectAjoEmoji(el) {
+  document.querySelectorAll('#ajo-emoji-picker span').forEach(s=>s.style.border='1px solid transparent');
+  el.style.border='1px solid var(--gold)';
+  state.selectedAjoEmoji = el.dataset.emoji;
+}
+
+// ─── PROFILE ─────────────────────────────────────────────────────────────────
+function renderAvatarPicker() {
+  const wrap = document.getElementById('avatar-picker');
+  wrap.innerHTML = AVATARS.map(a => `
+    <div class="av-opt ${state.user?.avatar===a?'selected':''}" onclick="setAvatar('${a}')">${a}</div>`).join('');
+}
+
+function setAvatar(emoji) {
+  state.user.avatar = emoji;
+  localStorage.setItem('maurpay_user_'+state.user.email, JSON.stringify(state.user));
+  saveState(); refreshUI(); renderAvatarPicker();
+  showToast('Avatar updated!','success');
+}
+
+function saveProfile() {
+  const name = document.getElementById('ep-name').value.trim();
+  const phone = document.getElementById('ep-phone').value.trim();
+  if (name) state.user.name = name;
+  if (phone) state.user.phone = phone;
+  localStorage.setItem('maurpay_user_'+state.user.email, JSON.stringify(state.user));
+  saveState(); refreshUI();
+  closeModal('edit-profile-modal');
+  showToast('Profile updated!','success');
+}
+
+function openEditProfile() {
+  document.getElementById('ep-name').value = state.user.name||'';
+  document.getElementById('ep-phone').value = state.user.phone||'';
+  openModal('edit-profile-modal');
+}
+
+// ─── DASHBOARD HELPERS ────────────────────────────────────────────────────────
+function renderDashCauses() {
+  const el = document.getElementById('dash-causes-list');
+  const top = state.causes.slice(0,3);
+  if (!top.length) { el.innerHTML='<div class="tx-empty">No causes yet.</div>'; return; }
+  el.innerHTML = top.map(c => {
+    const pct = Math.min(100,Math.round((c.raised/c.target)*100));
+    return `<div style="padding:12px 0;border-bottom:1px solid var(--border-light);cursor:pointer" onclick="goTo('causes')">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <span style="font-size:1.3rem">${c.emoji}</span>
+        <div>
+          <div style="font-size:.82rem;font-weight:600;margin-bottom:1px;line-height:1.3">${c.title}</div>
+          <div style="font-size:.7rem;color:var(--muted)">${c.cat}</div>
+        </div>
+      </div>
+      <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
+      <div style="font-size:.7rem;color:var(--gold);font-family:'Syne',sans-serif;font-weight:700;margin-top:4px;">${pct}% · ₦${fmtNum(c.raised)}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderTxList() {
+  const el = document.getElementById('tx-list');
+  const txs = [...state.transactions].reverse().slice(0,8);
+  if (!txs.length) { el.innerHTML='<div class="tx-empty">No transactions yet.<br>Fund your wallet to get started.</div>'; return; }
+  el.innerHTML = txs.map(tx => `
+    <div class="tx-row">
+      <div class="tx-dot ${tx.type}">${tx.type==='credit'?'⬇️':'⬆️'}</div>
+      <div class="tx-info">
+        <div class="tx-name">${tx.label}</div>
+        <div class="tx-time">${tx.date}</div>
+      </div>
+      <div class="tx-amt ${tx.type}">${tx.type==='credit'?'+':'-'}₦${fmtNum(tx.amount)}</div>
+    </div>`).join('');
+}
+
+function addTransaction(tx) {
+  state.transactions.push({ ...tx, date: new Date().toLocaleString('en-NG',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) });
+}
+
+// ─── MODALS ───────────────────────────────────────────────────────────────────
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+  document.body.style.overflow='hidden';
+  if (id==='edit-profile-modal') openEditProfile();
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  document.body.style.overflow='';
+}
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if(e.target===m) closeModal(m.id); });
+});
+document.addEventListener('keydown', e => {
+  if (e.key==='Escape') document.querySelectorAll('.modal-overlay.open').forEach(m=>closeModal(m.id));
+});
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show' + (type?' '+type:'');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className = '', 3000);
+}
+
+// ─── UTILS ────────────────────────────────────────────────────────────────────
+function fmtNum(n) {
+  return Number(n||0).toLocaleString('en-NG',{minimumFractionDigits:n%1?2:0,maximumFractionDigits:2});
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+loadState();
+if (state.user) bootApp();
+</script>
+</body>
+</html>
