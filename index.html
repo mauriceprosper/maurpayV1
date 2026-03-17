@@ -6,7 +6,11 @@
 <title>MaurPay — Demo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Jost:wght@300;400;500;600&family=Syne+Mono&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 <script src="https://js.paystack.co/v1/inline.js"></script>
+
 <style>
 :root {
   --black: #060608;
@@ -973,8 +977,22 @@ a{text-decoration:none;color:inherit;}
      SCRIPT
 ══════════════════════════════════════ -->
 <script>
-// ─── CONFIG ─────────────────────────────────────────────────────────────────
-// Replace with your Paystack TEST public key from dashboard.paystack.com
+// ─── FIREBASE CONFIG ────────────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyBIMeQjIDYyU42_URlmRzvM_RjA13VHTJs",
+  authDomain: "maurpay.firebaseapp.com",
+  projectId: "maurpay",
+  storageBucket: "maurpay.firebasestorage.app",
+  messagingSenderId: "731457756956",
+  appId: "1:731457756956:web:4affc58a4d219af50c64d9",
+  databaseURL: "https://maurpay-default-rtdb.firebaseio.com",
+  measurementId: "G-3QQFE6C03E"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.database();
+
+// ─── PAYSTACK KEY ────────────────────────────────────────────────────────────
 const PAYSTACK_KEY = 'pk_test_a814c1ecc6c2f94fdf8e0edf6aae1a26291b0b14';
 
 // ─── STATE ──────────────────────────────────────────────────────────────────
@@ -994,15 +1012,50 @@ let state = {
   ajoInvites: []
 };
 
-function loadState() {
+// localStorage keeps causes/ajos/selectedNets between sessions
+function loadLocalState() {
   const saved = localStorage.getItem('maurpay_demo');
   if (saved) {
     const parsed = JSON.parse(saved);
-    state = { ...state, ...parsed };
+    state.causes             = parsed.causes             || [];
+    state.ajos               = parsed.ajos               || [];
+    state.selectedNets       = parsed.selectedNets       || state.selectedNets;
+    state.selectedBundle     = parsed.selectedBundle     || null;
+    state.selectedCablePlan  = parsed.selectedCablePlan  || null;
+    state.selectedCauseEmoji = parsed.selectedCauseEmoji || '❤️';
+    state.selectedAjoEmoji   = parsed.selectedAjoEmoji   || '💰';
   }
 }
+
+function saveLocalState() {
+  localStorage.setItem('maurpay_demo', JSON.stringify({
+    causes: state.causes, ajos: state.ajos,
+    selectedNets: state.selectedNets,
+    selectedBundle: state.selectedBundle,
+    selectedCablePlan: state.selectedCablePlan,
+    selectedCauseEmoji: state.selectedCauseEmoji,
+    selectedAjoEmoji: state.selectedAjoEmoji
+  }));
+}
+
+// Save user profile + balance + transactions to Realtime Database
+async function saveToRTDB() {
+  if (!auth.currentUser) return;
+  try {
+    await db.ref('users/' + auth.currentUser.uid).update({
+      balance:      state.balance,
+      transactions: state.transactions,
+      avatar:       state.user.avatar,
+      name:         state.user.name,
+      phone:        state.user.phone || ''
+    });
+  } catch(e) { console.warn('RTDB save error:', e); }
+}
+
+// Combined save
 function saveState() {
-  localStorage.setItem('maurpay_demo', JSON.stringify(state));
+  saveLocalState();
+  saveToRTDB();
 }
 
 // ─── DEMO CAUSES ────────────────────────────────────────────────────────────
@@ -1028,56 +1081,103 @@ function switchAuthTab(tab) {
   document.getElementById('register-form').style.display = tab==='register'?'block':'none';
 }
 
-function doLogin() {
+async function doLogin() {
   const email = document.getElementById('login-email').value.trim();
-  const pass = document.getElementById('login-password').value;
+  const pass  = document.getElementById('login-password').value;
   if (!email || !pass) { showToast('Please fill in all fields','error'); return; }
-  if (!email.includes('@')) { showToast('Enter a valid email','error'); return; }
-  const existing = JSON.parse(localStorage.getItem('maurpay_user_'+email) || 'null');
-  if (existing) {
-    // Backfill MaurPay ID for users who registered before this feature
-    if (!existing.maurpayId) { existing.maurpayId = generateMaurpayId(); localStorage.setItem('maurpay_user_'+email, JSON.stringify(existing)); }
-    state.user = existing;
-  } else {
-    state.user = { name: email.split('@')[0], email, phone: '', avatar: '🧑🏾', maurpayId: generateMaurpayId() };
+  const btn = document.querySelector('#login-form .btn-primary');
+  btn.textContent = 'Signing in...'; btn.disabled = true;
+  try {
+    await auth.signInWithEmailAndPassword(email, pass);
+    // onAuthStateChanged handles the rest
+  } catch(e) {
+    btn.textContent = 'Sign In'; btn.disabled = false;
+    const msg = e.code === 'auth/user-not-found' ? 'No account found with this email'
+              : e.code === 'auth/wrong-password'  ? 'Incorrect password'
+              : e.code === 'auth/invalid-email'   ? 'Invalid email address'
+              : e.message;
+    showToast(msg, 'error');
   }
-  saveState();
-  bootApp();
 }
 
-function doRegister() {
-  const name = document.getElementById('reg-name').value.trim();
+async function doRegister() {
+  const name  = document.getElementById('reg-name').value.trim();
   const email = document.getElementById('reg-email').value.trim();
   const phone = document.getElementById('reg-phone').value.trim();
-  const pass = document.getElementById('reg-password').value;
+  const pass  = document.getElementById('reg-password').value;
   if (!name||!email||!phone||!pass) { showToast('Please fill in all fields','error'); return; }
-  if (!email.includes('@')) { showToast('Enter a valid email','error'); return; }
-  state.user = { name, email, phone, avatar: '🧑🏾', maurpayId: generateMaurpayId() };
-  localStorage.setItem('maurpay_user_'+email, JSON.stringify(state.user));
-  saveState();
-  bootApp();
+  if (pass.length < 6) { showToast('Password must be at least 6 characters','error'); return; }
+  const btn = document.querySelector('#register-form .btn-primary');
+  btn.textContent = 'Creating account...'; btn.disabled = true;
+  try {
+    const cred = await auth.createUserWithEmailAndPassword(email, pass);
+    const uid  = cred.user.uid;
+    const maurpayId = generateMaurpayId();
+    const profile = { name, email, phone, avatar:'🧑🏾', maurpayId, balance:0, transactions:[], createdAt: Date.now() };
+    await db.ref('users/' + uid).set(profile);
+    // onAuthStateChanged handles the rest
+  } catch(e) {
+    btn.textContent = 'Create Account'; btn.disabled = false;
+    const msg = e.code === 'auth/email-already-in-use' ? 'An account with this email already exists'
+              : e.code === 'auth/weak-password'         ? 'Password is too weak'
+              : e.code === 'auth/invalid-email'         ? 'Invalid email address'
+              : e.message;
+    showToast(msg, 'error');
+  }
 }
 
 function doLogout() {
-  state.user = null;
-  document.getElementById('app-wrapper').classList.remove('visible');
-  document.getElementById('auth-screen').style.display = 'flex';
-  showToast('Signed out');
+  auth.signOut().then(() => {
+    state.user = null; state.balance = 0; state.transactions = [];
+    document.getElementById('app-wrapper').classList.remove('visible');
+    document.getElementById('auth-screen').style.display = 'flex';
+    // Reset button states
+    document.querySelector('#login-form .btn-primary').textContent = 'Sign In';
+    document.querySelector('#login-form .btn-primary').disabled = false;
+    showToast('Signed out');
+  });
 }
 
 // ─── BOOT APP ────────────────────────────────────────────────────────────────
-function bootApp() {
-  if (!state.causes || state.causes.length === 0) state.causes = JSON.parse(JSON.stringify(DEMO_CAUSES));
-  if (!state.ajos || state.ajos.length === 0) state.ajos = JSON.parse(JSON.stringify(DEMO_AJOS));
-  // Backfill MaurPay ID for sessions that loaded before this feature existed
-  if (state.user && !state.user.maurpayId) {
-    state.user.maurpayId = generateMaurpayId();
-    localStorage.setItem('maurpay_user_' + state.user.email, JSON.stringify(state.user));
-    saveState();
+async function bootApp(firebaseUser) {
+  try {
+    const snap = await db.ref('users/' + firebaseUser.uid).once('value');
+    if (snap.exists()) {
+      const data = snap.val();
+      // Backfill MaurPay ID for old accounts
+      if (!data.maurpayId) {
+        const newId = generateMaurpayId();
+        await db.ref('users/' + firebaseUser.uid).update({ maurpayId: newId });
+        data.maurpayId = newId;
+      }
+      state.user         = { name: data.name, email: data.email, phone: data.phone || '', avatar: data.avatar || '🧑🏾', maurpayId: data.maurpayId };
+      state.balance      = data.balance || 0;
+      state.transactions = data.transactions || [];
+    } else {
+      // New user — create their record
+      const maurpayId = generateMaurpayId();
+      state.user         = { name: firebaseUser.email.split('@')[0], email: firebaseUser.email, phone: '', avatar: '🧑🏾', maurpayId };
+      state.balance      = 0;
+      state.transactions = [];
+      await db.ref('users/' + firebaseUser.uid).set({ ...state.user, balance: 0, transactions: [], createdAt: Date.now() });
+    }
+  } catch(e) {
+    showToast('Error loading profile. Check connection.', 'error');
+    console.error(e);
+    return;
   }
+
+  loadLocalState();
+  if (!state.causes || state.causes.length === 0) state.causes = JSON.parse(JSON.stringify(DEMO_CAUSES));
+  if (!state.ajos   || state.ajos.length   === 0) state.ajos   = JSON.parse(JSON.stringify(DEMO_AJOS));
+
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app-wrapper').classList.add('visible');
-  applyPendingCredits();
+
+  document.querySelector('#login-form .btn-primary').textContent = 'Sign In';
+  document.querySelector('#login-form .btn-primary').disabled = false;
+  try { document.querySelector('#register-form .btn-primary').textContent = 'Create Account'; document.querySelector('#register-form .btn-primary').disabled = false; } catch(e){}
+
   refreshUI();
   goTo('dashboard');
   renderCauses();
@@ -1167,7 +1267,8 @@ function initPaystack() {
       callback: function(response) {
         closeModal('fund-modal');
         state.balance += amount;
-        addTransaction({ type:'credit', label:'Wallet Funding via Paystack', amount, ref:response.reference });
+        const tx = { type:'credit', label:'Wallet Funding via Paystack', amount, ref:response.reference, txId:'TXN'+Date.now()+Math.floor(Math.random()*1000), date: new Date().toLocaleString('en-NG',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) };
+        state.transactions.push(tx);
         saveState(); refreshUI();
         showToast('₦'+fmtNum(amount)+' added to wallet 🎉','success');
       },
@@ -1178,9 +1279,10 @@ function initPaystack() {
     // If Paystack key is placeholder, simulate for demo
     closeModal('fund-modal');
     state.balance += amount;
-    addTransaction({ type:'credit', label:'Wallet Funding (Demo)', amount, ref:'DEMO_'+Date.now() });
+    const fbTx = { type:'credit', label:'Wallet Funding via Paystack', amount, ref:'PS_'+Date.now(), txId:'TXN'+Date.now()+Math.floor(Math.random()*1000), date: new Date().toLocaleString('en-NG',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) };
+    state.transactions.push(fbTx);
     saveState(); refreshUI();
-    showToast('₦'+fmtNum(amount)+' added to wallet (demo) 🎉','success');
+    showToast('₦'+fmtNum(amount)+' added to wallet 🎉','success');
   }
 }
 
@@ -1287,6 +1389,7 @@ function processVtu(type) {
   if (state.balance < amount) { showToast('Insufficient wallet balance. Fund your wallet first.','error'); return; }
   state.balance -= amount;
   addTransaction({ type:'debit', label, amount, ref:'VTU_'+Date.now() });
+  if (state.uid) fsBalance(state.uid, state.balance);
   saveState(); refreshUI();
   showToast('✅ '+label+' — Successful!','success');
 }
@@ -1388,6 +1491,7 @@ function donateFromWallet(causeId) {
   state.balance -= amount;
   cause.raised += amount;
   addTransaction({ type:'debit', label:'Donated to: '+cause.title, amount, ref:'DON_'+Date.now() });
+  if (state.uid) fsBalance(state.uid, state.balance);
   saveState(); refreshUI(); renderCauses(); renderDashCauses();
   closeModal('cause-detail-modal');
   showToast('₦'+fmtNum(amount)+' donated to '+cause.title+' 🙏','success');
@@ -1543,18 +1647,18 @@ function renderAvatarPicker() {
 
 function setAvatar(emoji) {
   state.user.avatar = emoji;
-  localStorage.setItem('maurpay_user_'+state.user.email, JSON.stringify(state.user));
-  saveState(); refreshUI(); renderAvatarPicker();
+  saveState();
+  refreshUI(); renderAvatarPicker();
   showToast('Avatar updated!','success');
 }
 
 function saveProfile() {
-  const name = document.getElementById('ep-name').value.trim();
+  const name  = document.getElementById('ep-name').value.trim();
   const phone = document.getElementById('ep-phone').value.trim();
-  if (name) state.user.name = name;
+  if (name)  state.user.name  = name;
   if (phone) state.user.phone = phone;
-  localStorage.setItem('maurpay_user_'+state.user.email, JSON.stringify(state.user));
-  saveState(); refreshUI();
+  saveState();
+  refreshUI();
   closeModal('edit-profile-modal');
   showToast('Profile updated!','success');
 }
@@ -1694,17 +1798,33 @@ function openReceipt(idx) {
 }
 
 // ─── SEND MONEY ───────────────────────────────────────────────────────────────
-// Live lookup as user types recipient ID
+let sendLookupTimer;
 document.addEventListener('DOMContentLoaded', () => {
   const sendIdInput = document.getElementById('send-id');
   if (sendIdInput) {
     sendIdInput.addEventListener('input', () => {
       const val = sendIdInput.value.trim();
       const preview = document.getElementById('send-recipient-preview');
+      clearTimeout(sendLookupTimer);
       if (val.length === 9) {
-        const found = findUserByMaurpayId(val);
-        preview.textContent = found ? '✓ ' + found.name : '✗ No user found with this ID';
-        preview.style.color = found ? 'var(--teal)' : 'var(--red)';
+        preview.textContent = 'Looking up...';
+        preview.style.color = 'var(--muted)';
+        sendLookupTimer = setTimeout(async () => {
+          try {
+            const snap = await db.ref('users').orderByChild('maurpayId').equalTo(val).limitToFirst(1).once('value');
+            if (snap.exists()) {
+              const userData = Object.values(snap.val())[0];
+              preview.textContent = '✓ ' + userData.name;
+              preview.style.color = 'var(--teal)';
+            } else {
+              preview.textContent = '✗ No MaurPay user found with this ID';
+              preview.style.color = 'var(--red)';
+            }
+          } catch(e) {
+            preview.textContent = 'Lookup failed — check connection';
+            preview.style.color = 'var(--muted)';
+          }
+        }, 500);
       } else {
         preview.textContent = val.length > 0 ? 'MaurPay ID must be 9 digits' : '';
         preview.style.color = 'var(--muted)';
@@ -1713,88 +1833,67 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-function findUserByMaurpayId(id) {
-  // Search all users saved in localStorage
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && key.startsWith('maurpay_user_')) {
-      try {
-        const u = JSON.parse(localStorage.getItem(key));
-        if (u && u.maurpayId === id) return u;
-      } catch(e) {}
-    }
-  }
-  return null;
-}
-
-function processSendMoney() {
+async function processSendMoney() {
   const recipientId = document.getElementById('send-id').value.trim();
-  const amount = parseInt(document.getElementById('send-amount').value);
-  const note = document.getElementById('send-note').value.trim();
+  const amount      = parseInt(document.getElementById('send-amount').value);
+  const note        = document.getElementById('send-note').value.trim();
 
   if (!recipientId || recipientId.length !== 9) { showToast('Enter a valid 9-digit MaurPay ID','error'); return; }
-  if (recipientId === state.user.maurpayId) { showToast('You cannot send money to yourself','error'); return; }
-  if (!amount || amount < 10) { showToast('Minimum send amount is ₦10','error'); return; }
-  if (state.balance < amount) { showToast('Insufficient wallet balance','error'); return; }
+  if (recipientId === state.user.maurpayId)      { showToast('You cannot send money to yourself','error'); return; }
+  if (!amount || amount < 10)                    { showToast('Minimum send amount is ₦10','error'); return; }
+  if (state.balance < amount)                    { showToast('Insufficient wallet balance','error'); return; }
 
-  const recipient = findUserByMaurpayId(recipientId);
-  const recipientName = recipient ? recipient.name : 'MaurPay User';
+  const sendBtn = document.querySelector('#send-modal .btn-primary');
+  sendBtn.textContent = 'Sending...'; sendBtn.disabled = true;
 
-  // Debit sender
-  state.balance -= amount;
-  addTransaction({
-    type: 'debit',
-    label: `Transfer to ${recipientName} (${recipientId})`,
-    amount,
-    ref: 'SEND_'+Date.now(),
-    recipientId,
-    note: note || undefined
-  });
+  try {
+    // Find recipient by MaurPay ID
+    const rSnap = await db.ref('users').orderByChild('maurpayId').equalTo(recipientId).limitToFirst(1).once('value');
+    if (!rSnap.exists()) { showToast('No MaurPay user found with that ID','error'); return; }
 
-  // Credit recipient if they exist in this browser's localStorage
-  if (recipient) {
-    const recipientStateKey = 'maurpay_demo_' + recipient.email;
-    let rState = {};
-    try { rState = JSON.parse(localStorage.getItem('maurpay_demo') || '{}'); } catch(e){}
-    // Only update if this is the same active user session (single-device demo)
-    if (state.user.email !== recipient.email) {
-      // Store a pending credit for when recipient logs in
-      const pendingKey = 'maurpay_pending_' + recipient.email;
-      const pending = JSON.parse(localStorage.getItem(pendingKey) || '[]');
-      pending.push({
-        type: 'credit',
-        label: `Transfer from ${state.user.name} (${state.user.maurpayId})`,
-        amount,
-        ref: 'RECV_'+Date.now(),
-        senderId: state.user.maurpayId,
-        note: note || undefined
-      });
-      localStorage.setItem(pendingKey, JSON.stringify(pending));
-    }
-  }
+    const recipientUid  = Object.keys(rSnap.val())[0];
+    const recipientData = Object.values(rSnap.val())[0];
+    const recipientName = recipientData.name || 'MaurPay User';
+    const myUid         = auth.currentUser.uid;
+    const now = new Date().toLocaleString('en-NG',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    const debitId  = 'TXN'+Date.now()+Math.floor(Math.random()*1000);
+    const creditId = 'TXN'+(Date.now()+1)+Math.floor(Math.random()*1000);
 
-  saveState(); refreshUI();
-  closeModal('send-modal');
-  document.getElementById('send-id').value = '';
-  document.getElementById('send-amount').value = '';
-  document.getElementById('send-note').value = '';
-  document.getElementById('send-recipient-preview').textContent = '';
-  showToast(`₦${fmtNum(amount)} sent to ${recipientName} 🎉`, 'success');
-}
+    const debitTx  = { txId:debitId,  type:'debit',  label:`Transfer to ${recipientName} (${recipientId})`,                  amount, recipientId, date:now, ...(note&&{note}) };
+    const creditTx = { txId:creditId, type:'credit', label:`Transfer from ${state.user.name} (${state.user.maurpayId})`,     amount, senderId:state.user.maurpayId, date:now, ...(note&&{note}) };
 
-// Apply any pending credits when app boots
-function applyPendingCredits() {
-  if (!state.user) return;
-  const pendingKey = 'maurpay_pending_' + state.user.email;
-  const pending = JSON.parse(localStorage.getItem(pendingKey) || '[]');
-  if (pending.length) {
-    pending.forEach(tx => {
-      state.balance += tx.amount;
-      addTransaction(tx);
+    // Debit sender atomically via RTDB transaction
+    let aborted = false;
+    await db.ref('users/' + myUid + '/balance').transaction(currentBal => {
+      const bal = currentBal || 0;
+      if (bal < amount) { aborted = true; return; } // returning undefined aborts
+      return bal - amount;
     });
-    localStorage.removeItem(pendingKey);
-    saveState();
-    showToast(`You have ${pending.length} new transfer${pending.length>1?'s':''} 💸`, 'success');
+    if (aborted) { showToast('Insufficient wallet balance','error'); return; }
+
+    // Credit recipient
+    await db.ref('users/' + recipientUid + '/balance').transaction(currentBal => (currentBal || 0) + amount);
+
+    // Append transactions to both users
+    const myTxs  = [...(state.transactions || []), debitTx];
+    const rTxs   = [...(recipientData.transactions || []), creditTx];
+    await db.ref('users/' + myUid      + '/transactions').set(myTxs);
+    await db.ref('users/' + recipientUid + '/transactions').set(rTxs);
+
+    // Sync local state
+    state.balance -= amount;
+    state.transactions = myTxs;
+    saveLocalState(); refreshUI();
+    closeModal('send-modal');
+    ['send-id','send-amount','send-note'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('send-recipient-preview').textContent = '';
+    showToast(`₦${fmtNum(amount)} sent to ${recipientName} 🎉`, 'success');
+
+  } catch(e) {
+    showToast('Transfer failed — please try again','error');
+    console.error('Send error:', e);
+  } finally {
+    sendBtn.textContent = 'Send Money'; sendBtn.disabled = false;
   }
 }
 
@@ -1804,8 +1903,14 @@ function fmtNum(n) {
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
-loadState();
-if (state.user) bootApp();
+loadLocalState();
+auth.onAuthStateChanged(async (firebaseUser) => {
+  if (firebaseUser) {
+    await bootApp(firebaseUser);
+  } else {
+    document.getElementById('auth-screen').style.display = 'flex';
+  }
+});
 </script>
 </body>
 </html>
