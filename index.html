@@ -1862,23 +1862,18 @@ async function processSendMoney() {
     const debitTx  = { txId:debitId,  type:'debit',  label:`Transfer to ${recipientName} (${recipientId})`,                  amount, recipientId, date:now, ...(note&&{note}) };
     const creditTx = { txId:creditId, type:'credit', label:`Transfer from ${state.user.name} (${state.user.maurpayId})`,     amount, senderId:state.user.maurpayId, date:now, ...(note&&{note}) };
 
-    // Debit sender atomically via RTDB transaction
-    let aborted = false;
-    await db.ref('users/' + myUid + '/balance').transaction(currentBal => {
-      const bal = currentBal || 0;
-      if (bal < amount) { aborted = true; return; } // returning undefined aborts
-      return bal - amount;
-    });
-    if (aborted) { showToast('Insufficient wallet balance','error'); return; }
+    // Debit sender + credit recipient
+const myTxs = [...(state.transactions || []), debitTx];
+const rTxs  = [...(recipientData.transactions || []), creditTx];
 
-    // Credit recipient
-    await db.ref('users/' + recipientUid + '/balance').transaction(currentBal => (currentBal || 0) + amount);
-
-    // Append transactions to both users
-    const myTxs  = [...(state.transactions || []), debitTx];
-    const rTxs   = [...(recipientData.transactions || []), creditTx];
-    await db.ref('users/' + myUid      + '/transactions').set(myTxs);
-    await db.ref('users/' + recipientUid + '/transactions').set(rTxs);
+await db.ref('users/' + myUid).update({
+  balance: state.balance - amount,
+  transactions: myTxs
+});
+await db.ref('users/' + recipientUid).update({
+  balance: (recipientData.balance || 0) + amount,
+  transactions: rTxs
+});
 
     // Sync local state
     state.balance -= amount;
