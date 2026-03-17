@@ -278,6 +278,32 @@ a{text-decoration:none;color:inherit;}
 .tx-amt.debit{color:var(--red);}
 .tx-empty{text-align:center;padding:32px;color:var(--muted);font-size:.85rem;}
 
+/* ── CLICKABLE TX ROW ── */
+.tx-row{cursor:pointer;border-radius:2px;transition:background .2s;}
+.tx-row:hover{background:var(--surface2);}
+
+/* ── MAURPAY ID BADGE ── */
+.mpay-id-wrap{display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border);padding:14px 16px;margin-top:12px;}
+.mpay-id-label{font-size:.6rem;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;font-family:'Syne Mono',monospace;margin-bottom:3px;}
+.mpay-id-value{font-family:'Syne Mono',monospace;font-size:1.05rem;font-weight:700;color:var(--gold);letter-spacing:.1em;}
+.mpay-id-copy{margin-left:auto;background:none;border:1px solid var(--border);color:var(--muted);font-size:.65rem;font-family:'Syne Mono',monospace;letter-spacing:.06em;padding:5px 10px;cursor:pointer;transition:all .2s;}
+.mpay-id-copy:hover{border-color:rgba(232,184,75,.4);color:var(--gold);}
+
+/* ── RECEIPT MODAL ── */
+.receipt-header{background:linear-gradient(135deg,#141428,#1e1e3c);border:1px solid var(--border);padding:28px;text-align:center;margin-bottom:24px;position:relative;overflow:hidden;}
+.receipt-header::before{content:'';position:absolute;top:-1px;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent 10%,var(--gold) 50%,transparent 90%);}
+.receipt-icon{font-size:2.4rem;margin-bottom:8px;}
+.receipt-amt{font-family:'Syne',sans-serif;font-weight:800;font-size:2rem;letter-spacing:-0.04em;line-height:1;}
+.receipt-amt.credit{color:var(--teal);}
+.receipt-amt.debit{color:var(--red);}
+.receipt-label-row{font-size:.78rem;color:var(--muted);margin-top:4px;}
+.receipt-row{display:flex;justify-content:space-between;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border-light);gap:16px;}
+.receipt-row:last-child{border-bottom:none;}
+.receipt-key{font-size:.7rem;color:var(--muted);font-family:'Syne Mono',monospace;letter-spacing:.06em;text-transform:uppercase;flex-shrink:0;}
+.receipt-val{font-size:.82rem;font-weight:500;color:var(--white);text-align:right;word-break:break-all;}
+.receipt-status{display:inline-flex;align-items:center;gap:6px;background:rgba(0,201,167,.1);border:1px solid rgba(0,201,167,.25);color:var(--teal);font-family:'Syne Mono',monospace;font-size:.65rem;letter-spacing:.08em;padding:4px 10px;text-transform:uppercase;}
+.receipt-divider{border:none;border-top:2px dashed rgba(255,255,255,.06);margin:16px 0;}
+
 /* ══════════════════════════════════════
    VTU SERVICES
 ══════════════════════════════════════ */
@@ -547,6 +573,7 @@ a{text-decoration:none;color:inherit;}
         <div class="wh-tagline">One balance for bills, donations & Ajo contributions</div>
         <div class="wh-actions">
           <button class="btn-sm" onclick="openModal('fund-modal')">+ Fund Wallet</button>
+          <button class="btn-outline-sm" onclick="openModal('send-modal')">↗ Send Money</button>
           <button class="btn-outline-sm" onclick="goTo('vtu')">Pay Bills</button>
           <button class="btn-outline-sm" onclick="goTo('causes')">Donate</button>
         </div>
@@ -557,6 +584,7 @@ a{text-decoration:none;color:inherit;}
         <div class="qa-item" onclick="openVtuTab('data')"><div class="qa-icon">📶</div><div class="qa-label">Data</div></div>
         <div class="qa-item" onclick="openVtuTab('electricity')"><div class="qa-icon">⚡</div><div class="qa-label">Electricity</div></div>
         <div class="qa-item" onclick="openVtuTab('cable')"><div class="qa-icon">📺</div><div class="qa-label">Cable TV</div></div>
+        <div class="qa-item" onclick="openModal('send-modal')"><div class="qa-icon">↗️</div><div class="qa-label">Send</div></div>
       </div>
 
       <div class="grid-2">
@@ -741,6 +769,13 @@ a{text-decoration:none;color:inherit;}
         <div>
           <div class="profile-name" id="profile-name">—</div>
           <div class="profile-email" id="profile-email">—</div>
+          <div class="mpay-id-wrap" style="margin-top:10px;padding:10px 14px;">
+            <div>
+              <div class="mpay-id-label">MaurPay ID</div>
+              <div class="mpay-id-value" id="profile-mpay-id">—</div>
+            </div>
+            <button class="mpay-id-copy" onclick="copyMaurpayId()">Copy</button>
+          </div>
         </div>
         <div style="margin-left:auto;">
           <button class="btn-outline-sm" onclick="openModal('edit-profile-modal')">Edit Profile</button>
@@ -752,6 +787,13 @@ a{text-decoration:none;color:inherit;}
         <div class="profile-field"><div class="pf-label">Email Address</div><div class="pf-value" id="pf-email">—</div></div>
         <div class="profile-field"><div class="pf-label">Phone Number</div><div class="pf-value" id="pf-phone">—</div></div>
         <div class="profile-field"><div class="pf-label">Wallet Balance</div><div class="pf-value" style="color:var(--gold)" id="pf-bal">₦0.00</div></div>
+        <div class="profile-field" style="grid-column:1/-1;">
+          <div class="pf-label">MaurPay ID — share this to receive money</div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div class="pf-value" style="color:var(--gold);font-family:'Syne Mono',monospace;letter-spacing:.12em;font-size:1.1rem;" id="pf-mpay-id">—</div>
+            <button class="mpay-id-copy" onclick="copyMaurpayId()">Copy ID</button>
+          </div>
+        </div>
       </div>
 
       <div class="card" style="margin-bottom:20px;">
@@ -887,6 +929,46 @@ a{text-decoration:none;color:inherit;}
   </div>
 </div>
 
+<!-- SEND MONEY -->
+<div class="modal-overlay" id="send-modal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('send-modal')">✕</button>
+    <div class="modal-title">Send Money</div>
+    <div class="modal-sub">Transfer funds to another MaurPay user instantly</div>
+    <div class="form-group">
+      <label class="form-label">Recipient MaurPay ID</label>
+      <input class="form-input" id="send-id" placeholder="e.g. 481927364" type="tel" maxlength="9">
+      <div id="send-recipient-preview" style="margin-top:8px;font-size:.78rem;color:var(--teal);font-family:'Syne Mono',monospace;min-height:18px;"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Amount (₦)</label>
+      <div class="amount-chips">
+        <div class="chip" onclick="selectChip(this,'send-amount',500)">₦500</div>
+        <div class="chip" onclick="selectChip(this,'send-amount',1000)">₦1,000</div>
+        <div class="chip" onclick="selectChip(this,'send-amount',5000)">₦5,000</div>
+        <div class="chip" onclick="selectChip(this,'send-amount',10000)">₦10,000</div>
+      </div>
+      <input class="form-input" id="send-amount" placeholder="Enter amount (₦)">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Narration (optional)</label>
+      <input class="form-input" id="send-note" placeholder="e.g. Thanks for the lunch 😄">
+    </div>
+    <div style="background:var(--surface2);border:1px solid var(--border-light);padding:12px 14px;margin-bottom:20px;font-size:.78rem;color:var(--muted);">
+      Your balance: <strong style="color:var(--gold)" id="send-bal-preview">₦0</strong>
+    </div>
+    <button class="btn-primary" onclick="processSendMoney()">Send Money</button>
+  </div>
+</div>
+
+<!-- TRANSACTION RECEIPT -->
+<div class="modal-overlay" id="receipt-modal">
+  <div class="modal-box" style="max-width:420px;">
+    <button class="modal-close" onclick="closeModal('receipt-modal')">✕</button>
+    <div id="receipt-content"></div>
+  </div>
+</div>
+
 <!-- ══════════════════════════════════════
      SCRIPT
 ══════════════════════════════════════ -->
@@ -951,12 +1033,13 @@ function doLogin() {
   const pass = document.getElementById('login-password').value;
   if (!email || !pass) { showToast('Please fill in all fields','error'); return; }
   if (!email.includes('@')) { showToast('Enter a valid email','error'); return; }
-  // Accept any credentials
   const existing = JSON.parse(localStorage.getItem('maurpay_user_'+email) || 'null');
   if (existing) {
+    // Backfill MaurPay ID for users who registered before this feature
+    if (!existing.maurpayId) { existing.maurpayId = generateMaurpayId(); localStorage.setItem('maurpay_user_'+email, JSON.stringify(existing)); }
     state.user = existing;
   } else {
-    state.user = { name: email.split('@')[0], email, phone: '', avatar: '🧑🏾' };
+    state.user = { name: email.split('@')[0], email, phone: '', avatar: '🧑🏾', maurpayId: generateMaurpayId() };
   }
   saveState();
   bootApp();
@@ -969,7 +1052,7 @@ function doRegister() {
   const pass = document.getElementById('reg-password').value;
   if (!name||!email||!phone||!pass) { showToast('Please fill in all fields','error'); return; }
   if (!email.includes('@')) { showToast('Enter a valid email','error'); return; }
-  state.user = { name, email, phone, avatar: '🧑🏾' };
+  state.user = { name, email, phone, avatar: '🧑🏾', maurpayId: generateMaurpayId() };
   localStorage.setItem('maurpay_user_'+email, JSON.stringify(state.user));
   saveState();
   bootApp();
@@ -988,6 +1071,7 @@ function bootApp() {
   if (!state.ajos || state.ajos.length === 0) state.ajos = JSON.parse(JSON.stringify(DEMO_AJOS));
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app-wrapper').classList.add('visible');
+  applyPendingCredits();
   refreshUI();
   goTo('dashboard');
   renderCauses();
@@ -1025,6 +1109,12 @@ function refreshUI() {
   document.getElementById('pf-email').textContent = u.email || '—';
   document.getElementById('pf-phone').textContent = u.phone || 'Not set';
   document.getElementById('pf-bal').textContent = '₦'+fmtNum(state.balance);
+  const mid = u.maurpayId || '—';
+  document.getElementById('profile-mpay-id').textContent = mid;
+  document.getElementById('pf-mpay-id').textContent = mid;
+  // Send money balance preview
+  const sendBal = document.getElementById('send-bal-preview');
+  if (sendBal) sendBal.textContent = '₦'+fmtNum(state.balance);
   // VTU bal displays
   ['air-bal-display','data-bal-display','elec-bal-display','cable-bal-display'].forEach(id => {
     const el = document.getElementById(id);
@@ -1492,21 +1582,29 @@ function renderDashCauses() {
 
 function renderTxList() {
   const el = document.getElementById('tx-list');
-  const txs = [...state.transactions].reverse().slice(0,8);
+  const allTxs = [...state.transactions].reverse();
+  const txs = allTxs.slice(0,8);
   if (!txs.length) { el.innerHTML='<div class="tx-empty">No transactions yet.<br>Fund your wallet to get started.</div>'; return; }
-  el.innerHTML = txs.map(tx => `
-    <div class="tx-row">
+  el.innerHTML = txs.map((tx, i) => {
+    const realIdx = state.transactions.length - 1 - i;
+    return `
+    <div class="tx-row" onclick="openReceipt(${realIdx})">
       <div class="tx-dot ${tx.type}">${tx.type==='credit'?'⬇️':'⬆️'}</div>
       <div class="tx-info">
         <div class="tx-name">${tx.label}</div>
         <div class="tx-time">${tx.date}</div>
       </div>
       <div class="tx-amt ${tx.type}">${tx.type==='credit'?'+':'-'}₦${fmtNum(tx.amount)}</div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function addTransaction(tx) {
-  state.transactions.push({ ...tx, date: new Date().toLocaleString('en-NG',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) });
+  state.transactions.push({
+    ...tx,
+    txId: 'TXN'+Date.now()+Math.floor(Math.random()*1000),
+    date: new Date().toLocaleString('en-NG',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})
+  });
 }
 
 // ─── MODALS ───────────────────────────────────────────────────────────────────
@@ -1534,6 +1632,164 @@ function showToast(msg, type='') {
   t.className = 'show' + (type?' '+type:'');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.className = '', 3000);
+}
+
+// ─── MAURPAY ID ───────────────────────────────────────────────────────────────
+function generateMaurpayId() {
+  return String(Math.floor(100000000 + Math.random() * 900000000));
+}
+
+function copyMaurpayId() {
+  const id = state.user?.maurpayId;
+  if (!id) return;
+  navigator.clipboard.writeText(id).then(() => showToast('MaurPay ID copied!','success')).catch(() => {
+    // fallback for non-https
+    const tmp = document.createElement('input');
+    tmp.value = id; document.body.appendChild(tmp); tmp.select();
+    document.execCommand('copy'); document.body.removeChild(tmp);
+    showToast('MaurPay ID copied!','success');
+  });
+}
+
+// ─── TRANSACTION RECEIPT ─────────────────────────────────────────────────────
+function openReceipt(idx) {
+  const tx = state.transactions[idx];
+  if (!tx) return;
+  const isCredit = tx.type === 'credit';
+  const typeLabel = isCredit ? 'Money Received' : 'Money Sent';
+  const icon = isCredit ? '⬇️' : '⬆️';
+  const rows = [
+    { key: 'Transaction ID', val: tx.txId || tx.ref || 'N/A' },
+    { key: 'Description', val: tx.label },
+    { key: 'Date & Time', val: tx.date },
+    { key: 'Type', val: typeLabel },
+    tx.note ? { key: 'Narration', val: tx.note } : null,
+    tx.recipientId ? { key: 'Recipient ID', val: tx.recipientId } : null,
+    tx.senderId ? { key: 'Sender ID', val: tx.senderId } : null,
+    { key: 'Status', val: '<span class="receipt-status">✓ Successful</span>' },
+  ].filter(Boolean);
+
+  document.getElementById('receipt-content').innerHTML = `
+    <div class="receipt-header">
+      <div class="receipt-icon">${icon}</div>
+      <div class="receipt-amt ${tx.type}">${isCredit?'+':'-'}₦${fmtNum(tx.amount)}</div>
+      <div class="receipt-label-row">${tx.label}</div>
+    </div>
+    <hr class="receipt-divider">
+    ${rows.map(r=>`
+      <div class="receipt-row">
+        <div class="receipt-key">${r.key}</div>
+        <div class="receipt-val">${r.val}</div>
+      </div>`).join('')}
+    <hr class="receipt-divider">
+    <div style="text-align:center;font-size:.7rem;color:rgba(136,136,152,.5);font-family:'Syne Mono',monospace;letter-spacing:.06em;margin-top:8px;">MaurPay · Secure Transactions · Nigeria 🇳🇬</div>
+  `;
+  openModal('receipt-modal');
+}
+
+// ─── SEND MONEY ───────────────────────────────────────────────────────────────
+// Live lookup as user types recipient ID
+document.addEventListener('DOMContentLoaded', () => {
+  const sendIdInput = document.getElementById('send-id');
+  if (sendIdInput) {
+    sendIdInput.addEventListener('input', () => {
+      const val = sendIdInput.value.trim();
+      const preview = document.getElementById('send-recipient-preview');
+      if (val.length === 9) {
+        const found = findUserByMaurpayId(val);
+        preview.textContent = found ? '✓ ' + found.name : '✗ No user found with this ID';
+        preview.style.color = found ? 'var(--teal)' : 'var(--red)';
+      } else {
+        preview.textContent = val.length > 0 ? 'MaurPay ID must be 9 digits' : '';
+        preview.style.color = 'var(--muted)';
+      }
+    });
+  }
+});
+
+function findUserByMaurpayId(id) {
+  // Search all users saved in localStorage
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('maurpay_user_')) {
+      try {
+        const u = JSON.parse(localStorage.getItem(key));
+        if (u && u.maurpayId === id) return u;
+      } catch(e) {}
+    }
+  }
+  return null;
+}
+
+function processSendMoney() {
+  const recipientId = document.getElementById('send-id').value.trim();
+  const amount = parseInt(document.getElementById('send-amount').value);
+  const note = document.getElementById('send-note').value.trim();
+
+  if (!recipientId || recipientId.length !== 9) { showToast('Enter a valid 9-digit MaurPay ID','error'); return; }
+  if (recipientId === state.user.maurpayId) { showToast('You cannot send money to yourself','error'); return; }
+  if (!amount || amount < 10) { showToast('Minimum send amount is ₦10','error'); return; }
+  if (state.balance < amount) { showToast('Insufficient wallet balance','error'); return; }
+
+  const recipient = findUserByMaurpayId(recipientId);
+  const recipientName = recipient ? recipient.name : 'MaurPay User';
+
+  // Debit sender
+  state.balance -= amount;
+  addTransaction({
+    type: 'debit',
+    label: `Transfer to ${recipientName} (${recipientId})`,
+    amount,
+    ref: 'SEND_'+Date.now(),
+    recipientId,
+    note: note || undefined
+  });
+
+  // Credit recipient if they exist in this browser's localStorage
+  if (recipient) {
+    const recipientStateKey = 'maurpay_demo_' + recipient.email;
+    let rState = {};
+    try { rState = JSON.parse(localStorage.getItem('maurpay_demo') || '{}'); } catch(e){}
+    // Only update if this is the same active user session (single-device demo)
+    if (state.user.email !== recipient.email) {
+      // Store a pending credit for when recipient logs in
+      const pendingKey = 'maurpay_pending_' + recipient.email;
+      const pending = JSON.parse(localStorage.getItem(pendingKey) || '[]');
+      pending.push({
+        type: 'credit',
+        label: `Transfer from ${state.user.name} (${state.user.maurpayId})`,
+        amount,
+        ref: 'RECV_'+Date.now(),
+        senderId: state.user.maurpayId,
+        note: note || undefined
+      });
+      localStorage.setItem(pendingKey, JSON.stringify(pending));
+    }
+  }
+
+  saveState(); refreshUI();
+  closeModal('send-modal');
+  document.getElementById('send-id').value = '';
+  document.getElementById('send-amount').value = '';
+  document.getElementById('send-note').value = '';
+  document.getElementById('send-recipient-preview').textContent = '';
+  showToast(`₦${fmtNum(amount)} sent to ${recipientName} 🎉`, 'success');
+}
+
+// Apply any pending credits when app boots
+function applyPendingCredits() {
+  if (!state.user) return;
+  const pendingKey = 'maurpay_pending_' + state.user.email;
+  const pending = JSON.parse(localStorage.getItem(pendingKey) || '[]');
+  if (pending.length) {
+    pending.forEach(tx => {
+      state.balance += tx.amount;
+      addTransaction(tx);
+    });
+    localStorage.removeItem(pendingKey);
+    saveState();
+    showToast(`You have ${pending.length} new transfer${pending.length>1?'s':''} 💸`, 'success');
+  }
 }
 
 // ─── UTILS ────────────────────────────────────────────────────────────────────
